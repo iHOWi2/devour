@@ -1,4 +1,4 @@
-import {formatBytes, formatStorage} from '../src/lib/format';
+import {formatBytes} from '../src/lib/format';
 
 describe('formatBytes', () => {
   it('formats small and invalid values without decimals', () => {
@@ -21,13 +21,5 @@ describe('formatBytes', () => {
   it('stops at the largest known unit', () => {
     expect(formatBytes(4 * 1024 ** 4)).toBe('4.0 TB');
     expect(formatBytes(4096 * 1024 ** 4)).toBe('4096 TB');
-  });
-});
-
-describe('formatStorage', () => {
-  it('reads as one line of machine data', () => {
-    expect(formatStorage(44_236_800_000, 137_438_953_472)).toBe(
-      '41.2 GB free of 128 GB',
-    );
   });
 });

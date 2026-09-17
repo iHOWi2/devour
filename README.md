@@ -60,27 +60,42 @@ The visual language lives in [docs/DESIGN.md](docs/DESIGN.md). The skill format 
 
 ## Current status
 
-**Phase 1 - Foundation: done and verified in CI.** Pull request #1, workflow run
-[35260611596](https://github.com/iHOWi2/devour/actions/runs/35260611596), 2026-09-17:
+**Phase 1 - Foundation: done and verified in CI.** Workflow run
+[35265672687](https://github.com/iHOWi2/devour/actions/runs/35265672687), 2026-09-17:
 
 - `lint, typecheck, tests` - passed
 - `android debug apk` - passed: `gradle assembleDebug` produced
-  `android/app/build/outputs/apk/debug/app-debug.apk`, uploaded as the `devour-debug-apk`
-  artifact (that upload step is configured to fail the job if the APK is missing)
+  `android/app/build/outputs/apk/debug/app-debug.apk`, the packaged APK is checked to contain
+  `assets/index.android.bundle`, and it is uploaded as the `devour-debug-apk` artifact
 
 What exists in code today:
 
 - React Native 0.87 + TypeScript app shell on the new architecture with Hermes
 - a Kotlin native layer with one real native module, `DevourEnvironment`, that reports device
   and storage facts and detects whether a Termux runtime host is installed
-- a Phase 1 status screen built from the Devour design tokens
-- Jest unit tests for the design tokens, formatting helpers and the native bridge wrapper
-- GitHub Actions: lint, typecheck and tests, plus an Android job that runs `assembleDebug`
-  and uploads `app-debug.apk`
+- dark and light themes, following the device appearance setting unless overridden
+- English and Russian, following the device locale unless overridden, with real Russian
+  plural rules
+- a Phase 1 status screen built from the Devour design tokens, with theme and language
+  controls revealed by a single footer row
+- Jest unit tests for the design tokens, the themes, localisation, formatting helpers, the
+  native bridge wrapper and the screen itself
+- GitHub Actions: lint, typecheck and tests, plus an Android job that runs `assembleDebug`,
+  proves the JS bundle is packaged, and uploads `app-debug.apk`
 
-What is **not** proven yet: the APK has not been installed and launched on hardware from the
-environment that built it. "It compiles, links and packages" is verified; "it renders real
-device facts on a phone" is not, and that check carries into Phase 2.
+**Fixed after the first install on hardware.** A stock React Native debug build packages no
+JS bundle: the Gradle plugin registers the bundling task only for variants that are *not*
+listed in `debuggableVariants`, which defaults to `['debug', 'debugOptimized']`. That is fine
+with Metro running over USB and useless for an APK downloaded from CI onto a phone, which
+installed and then died on "Unable to load script". Devour sets `debuggableVariants = []`, so
+every artifact is self-contained, and CI now fails when the bundle is missing instead of
+shipping an APK that cannot start. A running Metro still takes priority, so fast refresh is
+unchanged.
+
+What is **not** proven yet: this APK has not been launched on hardware. The previous one was,
+and it failed at exactly the point described above, so the check stays open until a build
+from CI starts on a real device. Theme and language choices also live for the session only;
+there is no settings store before Phase 3, and a fake one would be a lie.
 
 The agent runtime, tools, skills, MCP and connectors are **specified in `docs/`, not stubbed
 in code**. They arrive phase by phase, each with working behaviour.
@@ -119,7 +134,8 @@ cd android && ./gradlew assembleDebug
 ```
 
 The debug build is signed with the Android Gradle Plugin's managed debug keystore, so no
-keystore is stored in the repository.
+keystore is stored in the repository. It also carries its own JS bundle, so it runs without a
+development server.
 
 ## Development
 
@@ -143,10 +159,12 @@ Android code changed. See [CONTRIBUTING.md](CONTRIBUTING.md).
 |       |-- MainActivity.kt
 |       `-- nativemodules/       DevourEnvironment module and its ReactPackage
 |-- src/
-|   |-- App.tsx                  Phase 1 status screen
-|   |-- design/tokens.ts         colour, type, spacing and motion tokens
+|   |-- App.tsx                  composition root: theme and language providers
+|   |-- design/                  tokens, both palettes, ThemeProvider
+|   |-- i18n/                    dictionaries, plural rules, LanguageProvider
 |   |-- lib/format.ts            pure formatting helpers
 |   |-- native/                  typed wrappers over the Kotlin layer
+|   |-- screens/                 FoundationScreen - the Phase 1 status screen
 |   `-- ui/                      small presentational components
 |-- __tests__/                   Jest unit tests
 |-- docs/                        architecture, design, skills, roadmap, research
@@ -158,7 +176,8 @@ Android code changed. See [CONTRIBUTING.md](CONTRIBUTING.md).
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 0 | Research: design principles, skill architecture, MCP, RN and Android integration | done |
-| 1 | Foundation: repository, RN + TypeScript, Kotlin layer, CI, debug APK | done |
+| 1 | Foundation: repository, RN + TypeScript, Kotlin layer, CI, runnable debug APK | done |
+| 1.1 | Themes (dark, light) and localisation (English, Russian) from device settings | done |
 | 2 | Chat: streaming, model abstraction, conversation state, markdown and code blocks | next |
 | 3 | Workspace: project selection, filesystem access, file tree, workspace state | planned |
 | 4 | Runtime: shell execution, PTY, Termux integration, command output | planned |

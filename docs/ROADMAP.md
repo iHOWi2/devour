@@ -26,9 +26,9 @@ app launches and shows real device and runtime-host facts.
 
 **Result, 2026-09-17.** Pull request #1, workflow run
 [35260611596](https://github.com/iHOWi2/devour/actions/runs/35260611596): both jobs passed and
-`app-debug.apk` was uploaded as the `devour-debug-apk` artifact. The third clause -
-launching on hardware - is **not** verified: the environment that produced this phase has no
-device and no network, so it carries into Phase 2 as the first thing to confirm.
+`app-debug.apk` was uploaded as the `devour-debug-apk` artifact. The third clause - launching
+on hardware - was left unverified, because the environment that produced this phase has no
+device. It was then tested by hand and **failed**: see Phase 1.1.
 
 CI, not guesswork, found four real defects. Each was fixed on the branch before the phase was
 declared done:
@@ -45,11 +45,51 @@ package id on the GitHub runner, which ships `android-37.0`, `37.1` and `37.2`. 
 is best effort and logs the installed packages; the Android Gradle Plugin resolves
 `compileSdk 37` on its own.
 
+## Phase 1.1 - Runnable APK, themes and language (done)
+
+Opened by the first install on a physical phone. The Phase 1 artefact installed, started, and
+died on a red screen: *"Unable to load script. Make sure you're running Metro or that your
+bundle 'index.android.bundle' is packaged correctly for release."* The stack ended in
+`loadJSBundleFromAssets`, which is React Native's fallback once no development server answers
+- and it failed because the APK contained no bundle at all.
+
+Delivered:
+
+- `debuggableVariants = []`, so every artefact carries its own JS bundle; a running Metro
+  still wins, so fast refresh is unchanged
+- a CI step that greps the packaged APK and fails the job when
+  `assets/index.android.bundle` is absent - an APK that cannot start is not a passing build
+- dark and light themes: colour moved out of the tokens into two semantic palettes, so
+  components ask for roles (`surface`, `danger`, `onAccent`) and never for hex values
+- English and Russian, resolved from the device locale (`I18nManager` constants), with typed
+  dictionaries that make a missing translation a typecheck error and real Russian plural
+  rules (1 ядро / 2 ядра / 5 ядер)
+- a settings panel behind one labelled footer row: segmented controls for theme and language,
+  44 px targets, accent used as a 2 px indicator instead of a fill
+- tests for theme resolution and palette parity, locale fallbacks, plural categories,
+  dictionary completeness, and the screen itself rendering, switching and recovering
+
+**Exit criteria:** CI green, the packaged APK provably contains `assets/index.android.bundle`,
+and the app starts on a device with no development server, in the device's language and
+appearance.
+
+**Result, 2026-09-17.** Pull request #2, workflow run
+[35265672687](https://github.com/iHOWi2/devour/actions/runs/35265672687): both jobs passed and
+the new check confirmed the bundle is inside the APK. The device clause stays open until the
+artefact from that run has been installed and launched.
+
+Two more defects, both caught by CI rather than by reading the code:
+
+| Defect | Fix |
+| --- | --- |
+| the debug APK shipped without `assets/index.android.bundle`, because the React Native Gradle plugin registers the bundling task only for variants that are *not* in `debuggableVariants` (default `['debug', 'debugOptimized']`) | `debuggableVariants = []`, plus a CI check on the packaged APK |
+| the theme layer reused React Native's `ColorSchemeName`, which is `'light' \| 'dark'`, while `useColorScheme()` returns `ColorSchemeName \| null` and an unset device reports nothing | the theme layer declares its own `DeviceColorScheme` and takes the widest honest input, instead of pushing a cast onto callers |
+
 ## Phase 2 - Chat (next)
 
 Streaming responses, `ModelProvider` abstraction, conversation state, markdown and code block
-rendering, error and retry states. Also closes the open Phase 1 clause: install and launch the
-debug APK on a real device.
+rendering, error and retry states. Also closes the open Phase 1.1 clause: install and launch
+the bundled debug APK on a real device.
 
 **Exit criteria:** a conversation survives rotation and process death; swapping the provider
 requires no UI change; streaming can be cancelled.
@@ -121,7 +161,10 @@ Signed release APK, GitHub release with artefacts, user documentation, release a
 
 Tracked so it is not forgotten, and not pretended away:
 
-- install and launch `app-debug.apk` on a physical device (open half of Phase 1)
+- install and launch the bundled `app-debug.apk` on a physical device (open half of
+  Phase 1.1)
+- persist the theme and language choice; there is no settings store before Phase 3, so today
+  the choice lives for the session and the device setting is the default
 - commit `package-lock.json` once it is generated on a machine with network access; switch CI
   to `npm ci`
 - commit the Gradle wrapper (`gradlew`, `gradle-wrapper.jar`) generated locally

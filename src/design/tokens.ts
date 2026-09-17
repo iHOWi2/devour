@@ -1,26 +1,12 @@
 /**
- * Devour design tokens.
+ * Devour design tokens: everything except colour.
  *
- * The direction is documented in docs/DESIGN.md: a cool instrument chassis, warm off-white
- * text, and exactly one molten accent for whatever is happening right now.
+ * Colour lives in `theme.ts`, because Devour ships two themes and no component may reach
+ * for a raw hex value. Scale, type and motion are deliberately theme independent: changing
+ * the theme changes the palette, never the rhythm.
  *
- * Components must not hard-code colour, spacing or type. Everything comes from here, so the
- * design language stays reviewable in one file.
+ * The direction is documented in docs/DESIGN.md.
  */
-
-export const palette = {
-  chassis: '#101519',
-  surface: '#171E24',
-  edge: '#25303A',
-  bone: '#ECE7DF',
-  muted: '#8494A1',
-  molten: '#FF4A17',
-  ok: '#5FD3A3',
-  warn: '#E8B34A',
-  danger: '#F2645A',
-} as const;
-
-export type ColourToken = keyof typeof palette;
 
 /** Four pixel base scale. */
 export const space = {
@@ -37,6 +23,9 @@ export const radius = {
   sheet: 10,
   chip: 999,
 } as const;
+
+/** Smallest touch target that may ship, in density independent pixels. */
+export const TOUCH_TARGET = 44;
 
 /** Two families: platform sans for interface text, platform mono for machine truth. */
 export const typography = {

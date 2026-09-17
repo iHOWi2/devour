@@ -9,10 +9,22 @@ apply plugin: "com.facebook.react"
  *  - no committed debug keystore: debug builds use the Android Gradle Plugin's managed one
  *  - release signing comes from environment variables, so no secret lives in the repository
  *  - ndkVersion is not pinned: the app ships no C++ of its own
+ *  - debug builds carry a JavaScript bundle, see the react block below
  */
 
 react {
     autolinkLibrariesWithApp()
+
+    // Bundle JavaScript into every variant, debug included.
+    //
+    // The React Native Gradle plugin skips `createBundle<Variant>JsAndAssets` for every
+    // variant listed in `debuggableVariants`, which defaults to ['debug', 'debugOptimized'].
+    // A stock debug APK therefore ships without `assets/index.android.bundle`: it installs
+    // fine and then dies at launch with "Unable to load script" unless a Metro server is
+    // reachable. Devour hands debug APKs straight from CI to phones, so the artefact has to
+    // carry its own bundle. A running Metro still takes precedence, so the development loop
+    // with fast refresh is unchanged - the bundle is the fallback, not the source of truth.
+    debuggableVariants = []
 }
 
 def enableProguardInReleaseBuilds = false
