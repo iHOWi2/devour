@@ -21,7 +21,7 @@ instead of being stubbed in code, so that nothing in the repository pretends to 
 
 ```
 +-------------------------------------------------------------+
-| UI            src/screens, src/ui, src/design              |
+| UI            src/screens, src/ui, src/design, src/i18n     |
 |               React Native + TypeScript. Renders state,     |
 |               sends intents. Knows nothing about models.    |
 +-------------------------------------------------------------+
@@ -51,10 +51,12 @@ instead of being stubbed in code, so that nothing in the repository pretends to 
 
 | Layer | May import | Must never import |
 | --- | --- | --- |
-| UI | `src/agent` public API, `src/design`, `src/ui`, `src/lib` | model SDKs, `src/native/*` internals, runtime implementations |
+| UI | `src/agent` public API, `src/design`, `src/i18n`, `src/ui`, `src/lib` | model SDKs, `src/native/*` internals, runtime implementations |
 | Agent runtime | capability interfaces, `src/lib` | React Native components, Termux-specific code |
 | Tools / Skills / MCP / Connectors | `src/native` wrappers, `src/lib` | UI, each other's internals |
 | `src/native` | `react-native` only | agent runtime, UI |
+| `src/design` | `react-native` primitives only | screens, `src/i18n`, product logic |
+| `src/i18n` | `react-native` primitives only | screens, `src/design`, product logic |
 | Kotlin | Android APIs, React Native bridge | any product or UI logic |
 
 A violation of this table is a bug, even if the feature works.
@@ -181,11 +183,42 @@ JavaScript never touches `NativeModules` directly outside `src/native/`. The wra
 normalises values and fails with a typed error when the bridge is missing, so a JS-only
 development build degrades instead of crashing.
 
+## Themes and language (implemented)
+
+Both are presentation concerns, so they live in the UI layer and are decided once at the
+composition root (`src/App.tsx`), never read from a global singleton inside a component.
+
+```
+App
+  LanguageProvider   device locale -> Language -> Translator  (src/i18n)
+    ThemeProvider    device scheme -> ThemeName -> Theme      (src/design)
+      FoundationScreen
+```
+
+| Concern | Owner | Resolution order |
+| --- | --- | --- |
+| Theme | `src/design/ThemeProvider.tsx` | explicit choice, then `useColorScheme()`, then dark |
+| Language | `src/i18n/LanguageProvider.tsx` | explicit choice, then device locale, then English |
+
+The device locale is read once through React Native's `I18nManager` constants, which expose
+Android's `Locale.toString()` value (`ru_RU`). The constant is optional and the module is
+absent in a test renderer, so `src/i18n/device.ts` guards it and falls back instead of
+throwing. `resolveLanguage` accepts `ru_RU`, `ru-RU`, `ru` and `ru_RU.UTF-8` alike.
+
+Components read a `Theme` from context and a `Translator` from context; they never import a
+palette or a string literal. Styles are built per theme with
+`useMemo(() => createStyles(theme), [theme])`, which keeps `StyleSheet.create` out of the
+render path while still allowing the palette to change at runtime.
+
+Neither choice is persisted yet: there is no settings store before Phase 3, and a fake one
+would be a lie. Both reset to the device default on restart, which is documented behaviour
+rather than an oversight.
+
 ## Phase mapping
 
 | Layer | Lands in |
 | --- | --- |
-| Native platform facts, UI shell, CI | Phase 1 |
+| Native platform facts, UI shell, themes, localisation, CI | Phase 1 |
 | Agent runtime, model abstraction | Phase 2 |
 | Workspace state and filesystem | Phase 3 |
 | Execution API and Termux runtime | Phase 4 |
@@ -206,3 +239,6 @@ development build degrades instead of crashing.
 | 5 | No committed debug keystore | debug builds use the Android Gradle Plugin's managed keystore |
 | 6 | Release signing from environment variables | no secrets in the repository; unsigned APK when no keystore is provided |
 | 7 | No dependency added without a working use | keeps the foundation small and the build fast |
+| 8 | `debuggableVariants = []` in the app's `react` block | the plugin skips JS bundling for debuggable variants, so the debug APK shipped without `assets/index.android.bundle` and died at launch with "Unable to load script"; CI now fails if the bundle is missing from the APK |
+| 9 | Semantic palettes per theme, no hex in components | a second theme costs nothing, and a component cannot accidentally become theme specific |
+| 10 | Own i18n layer instead of a library | two languages need a typed dictionary and one plural rule; `Intl.PluralRules` is not guaranteed in Hermes, and a library would add weight without adding correctness |
