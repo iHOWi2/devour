@@ -38,7 +38,9 @@ export function ThemeProvider({children, initialPreference = 'system'}: Props) {
     [preference, scheme],
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 
 export function useThemeControl(): ThemeControl {

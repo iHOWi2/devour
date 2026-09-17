@@ -1,11 +1,15 @@
-import {NativeModules} from 'react-native';
+import {
+  NativeBridgeUnavailableError,
+  isNativeModuleAvailable,
+  resolveNativeModule,
+} from './bridge';
 
 /**
  * TypeScript boundary over the Kotlin layer.
  *
- * Nothing outside `src/native` touches `NativeModules`. Values coming across the bridge are
- * normalised here, and a missing native module fails with a typed error instead of crashing,
- * so a JavaScript-only development build degrades honestly.
+ * Values coming across the bridge are normalised here: the module reports what Android
+ * reports, and a field the native side omitted becomes a visible fallback rather than
+ * `undefined` leaking into a screen.
  */
 
 /** Status of the local execution runtime. Detected in Kotlin, see docs/ARCHITECTURE.md. */
@@ -31,16 +35,6 @@ export type DeviceEnvironment = {
 
 export const ENVIRONMENT_MODULE_NAME = 'DevourEnvironment';
 
-/** Thrown when the Kotlin layer is not part of the running binary. */
-export class NativeBridgeUnavailableError extends Error {
-  constructor(moduleName: string = ENVIRONMENT_MODULE_NAME) {
-    super(
-      `Native module "${moduleName}" is not registered. Rebuild the Android app so the Kotlin layer is linked.`,
-    );
-    this.name = 'NativeBridgeUnavailableError';
-  }
-}
-
 type RawRuntimeHost = Partial<RuntimeHostStatus> | null | undefined;
 
 type RawEnvironment = Partial<Omit<DeviceEnvironment, 'runtimeHost'>> & {
@@ -52,15 +46,11 @@ type EnvironmentModule = {
 };
 
 function resolveModule(): EnvironmentModule | undefined {
-  const modules = NativeModules as Record<
-    string,
-    EnvironmentModule | undefined
-  >;
-  return modules[ENVIRONMENT_MODULE_NAME] ?? undefined;
+  return resolveNativeModule<EnvironmentModule>(ENVIRONMENT_MODULE_NAME);
 }
 
 export function isNativeBridgeAvailable(): boolean {
-  return resolveModule() !== undefined;
+  return isNativeModuleAvailable(ENVIRONMENT_MODULE_NAME);
 }
 
 function numberOr(value: unknown, fallback: number): number {
@@ -99,7 +89,7 @@ export async function readEnvironment(): Promise<DeviceEnvironment> {
   const native = resolveModule();
 
   if (native === undefined) {
-    throw new NativeBridgeUnavailableError();
+    throw new NativeBridgeUnavailableError(ENVIRONMENT_MODULE_NAME);
   }
 
   return normalizeEnvironment(await native.getEnvironment());

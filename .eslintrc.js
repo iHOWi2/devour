@@ -7,7 +7,7 @@ module.exports = {
   // Formatting is applied with `npm run format` and checked with `npm run format:check`.
   overrides: [
     {
-      files: ['__tests__/**/*.ts', '__tests__/**/*.tsx'],
+      files: ['__tests__/**/*.ts', '__tests__/**/*.tsx', 'jest.setup.js'],
       env: {jest: true},
     },
   ],
