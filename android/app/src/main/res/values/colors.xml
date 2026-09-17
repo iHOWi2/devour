@@ -1,0 +1,4 @@
+<resources>
+    <!-- Chassis from docs/DESIGN.md. Used for the window background so launch has no flash. -->
+    <color name="devour_chassis">#101519</color>
+</resources>
