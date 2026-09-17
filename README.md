@@ -60,7 +60,15 @@ The visual language lives in [docs/DESIGN.md](docs/DESIGN.md). The skill format 
 
 ## Current status
 
-**Phase 1 - Foundation (in progress).** What exists in code today:
+**Phase 1 - Foundation: done and verified in CI.** Pull request #1, workflow run
+[35260611596](https://github.com/iHOWi2/devour/actions/runs/35260611596), 2026-09-17:
+
+- `lint, typecheck, tests` - passed
+- `android debug apk` - passed: `gradle assembleDebug` produced
+  `android/app/build/outputs/apk/debug/app-debug.apk`, uploaded as the `devour-debug-apk`
+  artifact (that upload step is configured to fail the job if the APK is missing)
+
+What exists in code today:
 
 - React Native 0.87 + TypeScript app shell on the new architecture with Hermes
 - a Kotlin native layer with one real native module, `DevourEnvironment`, that reports device
@@ -69,6 +77,10 @@ The visual language lives in [docs/DESIGN.md](docs/DESIGN.md). The skill format 
 - Jest unit tests for the design tokens, formatting helpers and the native bridge wrapper
 - GitHub Actions: lint, typecheck and tests, plus an Android job that runs `assembleDebug`
   and uploads `app-debug.apk`
+
+What is **not** proven yet: the APK has not been installed and launched on hardware from the
+environment that built it. "It compiles, links and packages" is verified; "it renders real
+device facts on a phone" is not, and that check carries into Phase 2.
 
 The agent runtime, tools, skills, MCP and connectors are **specified in `docs/`, not stubbed
 in code**. They arrive phase by phase, each with working behaviour.
@@ -89,7 +101,7 @@ in code**. They arrive phase by phase, each with working behaviour.
 npm install
 
 # one-time: binary JARs are not committed, so generate the Gradle wrapper locally
-./scripts/bootstrap-gradle-wrapper.sh
+bash scripts/bootstrap-gradle-wrapper.sh
 ```
 
 Run the app on a connected device or emulator:
@@ -146,8 +158,8 @@ Android code changed. See [CONTRIBUTING.md](CONTRIBUTING.md).
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 0 | Research: design principles, skill architecture, MCP, RN and Android integration | done |
-| 1 | Foundation: repository, RN + TypeScript, Kotlin layer, CI, debug APK | in progress |
-| 2 | Chat: streaming, model abstraction, conversation state, markdown and code blocks | planned |
+| 1 | Foundation: repository, RN + TypeScript, Kotlin layer, CI, debug APK | done |
+| 2 | Chat: streaming, model abstraction, conversation state, markdown and code blocks | next |
 | 3 | Workspace: project selection, filesystem access, file tree, workspace state | planned |
 | 4 | Runtime: shell execution, PTY, Termux integration, command output | planned |
 | 5 | Agent tools: file tools, search, shell, Git, process control | planned |

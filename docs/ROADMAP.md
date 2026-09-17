@@ -12,7 +12,7 @@ Design principles, skill-format practice, agent architecture, MCP layering, curr
 Native and Android toolchain versions, Termux integration constraints. Findings:
 [RESEARCH.md](RESEARCH.md).
 
-## Phase 1 - Foundation (in progress)
+## Phase 1 - Foundation (done)
 
 - GitHub repository with README, license, contribution rules, issue and PR templates
 - React Native 0.87 + TypeScript application shell, new architecture, Hermes
@@ -24,10 +24,32 @@ Native and Android toolchain versions, Termux integration constraints. Findings:
 **Exit criteria:** CI green on a pull request, `app-debug.apk` downloadable from the run, the
 app launches and shows real device and runtime-host facts.
 
-## Phase 2 - Chat
+**Result, 2026-09-17.** Pull request #1, workflow run
+[35260611596](https://github.com/iHOWi2/devour/actions/runs/35260611596): both jobs passed and
+`app-debug.apk` was uploaded as the `devour-debug-apk` artifact. The third clause -
+launching on hardware - is **not** verified: the environment that produced this phase has no
+device and no network, so it carries into Phase 2 as the first thing to confirm.
+
+CI, not guesswork, found four real defects. Each was fixed on the branch before the phase was
+declared done:
+
+| Defect | Fix |
+| --- | --- |
+| ESLint config referenced `prettier/prettier`, but `@react-native/eslint-config` 0.87 no longer ships the plugin | Prettier is a formatter here (`npm run format`), not an ESLint rule |
+| AGP 9 refuses `getDefaultProguardFile('proguard-android.txt')` because it carries `-dontoptimize` | use `proguard-android-optimize.txt` |
+| `MainActivity.kt` used `fabricEnabled` without importing it | import `DefaultNewArchitectureEntryPoint.fabricEnabled` |
+| the app theme referenced `@drawable/rn_edit_text_material`, which lives in app resources rather than the React Native AAR | added the drawable, same content as the React Native template |
+
+One warning in the Android job is expected and harmless: `platforms;android-37` is not a
+package id on the GitHub runner, which ships `android-37.0`, `37.1` and `37.2`. The SDK step
+is best effort and logs the installed packages; the Android Gradle Plugin resolves
+`compileSdk 37` on its own.
+
+## Phase 2 - Chat (next)
 
 Streaming responses, `ModelProvider` abstraction, conversation state, markdown and code block
-rendering, error and retry states.
+rendering, error and retry states. Also closes the open Phase 1 clause: install and launch the
+debug APK on a real device.
 
 **Exit criteria:** a conversation survives rotation and process death; swapping the provider
 requires no UI change; streaming can be cancelled.
@@ -99,9 +121,11 @@ Signed release APK, GitHub release with artefacts, user documentation, release a
 
 Tracked so it is not forgotten, and not pretended away:
 
+- install and launch `app-debug.apk` on a physical device (open half of Phase 1)
 - commit `package-lock.json` once it is generated on a machine with network access; switch CI
   to `npm ci`
 - commit the Gradle wrapper (`gradlew`, `gradle-wrapper.jar`) generated locally
 - migrate `DevourEnvironment` to a codegen TurboModule spec (Phase 4)
 - multi-architecture debug builds in CI (currently `arm64-v8a` for speed)
 - enforce Prettier formatting as a CI error once the toolchain is pinned by a lockfile
+- `release.yml` is unverified: it runs only on a `v*` tag, and no tag exists yet
