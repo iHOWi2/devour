@@ -70,12 +70,14 @@ Start with `CONTRIBUTING.md` if you are new to the project, then `docs/MAP.md`.
 
 ## Current status
 
-**Phase 2 - Chat: in review.** The branch `phase-2/streaming-chat` is open; this section is
-updated from the workflow run, not from expectation. Phase 1.2 and everything before it is
-done and verified in CI, and the Phase 1.1 artefact was verified by hand on a TECNO KJ6
-(Android 13, API 33, arm64-v8a): the app launches with no development server, reports real
-device and storage facts, detects Termux as the runtime host, and picks Russian and the dark
-theme from the device settings.
+**Phase 2 - Chat: done, verified in CI.** Workflow run
+[35275846429](https://github.com/iHOWi2/devour/actions/runs/35275846429), 2026-09-17: `lint, typecheck,
+tests` and `android debug apk` both passed on the first attempt, including the check that the
+packaged APK carries `assets/index.android.bundle`. The Phase 1.1 artefact was also verified
+by hand on a TECNO KJ6 (Android 13, API 33, arm64-v8a): the app launches with no development
+server, reports real device and storage facts, detects Termux as the runtime host, and picks
+Russian and the dark theme from the device settings. **The Phase 2 artefact has not been
+installed on a phone yet.**
 
 What exists in code today:
 
@@ -206,7 +208,7 @@ Full annotated map, including where new work belongs: [docs/MAP.md](docs/MAP.md)
 | 1     | Foundation: repository, RN + TypeScript, Kotlin layer, CI, runnable debug APK     | done    |
 | 1.1   | Themes (dark, light) and localisation (English, Russian) from device settings     | done    |
 | 1.2   | Navigation of the project itself: the map, the handoff briefing, the device row   | done    |
-| 2     | Chat: streaming, model abstraction, conversation state, markdown and code blocks  | review  |
+| 2     | Chat: streaming, model abstraction, conversation state, markdown and code blocks  | done    |
 | 3     | Workspace: project selection, filesystem access, file tree, workspace state       | planned |
 | 4     | Runtime: shell execution, PTY, Termux integration, command output                 | planned |
 | 5     | Agent tools: file tools, search, shell, Git, process control                      | planned |

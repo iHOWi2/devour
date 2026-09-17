@@ -156,8 +156,12 @@ Delivered:
 **Exit criteria:** a conversation survives rotation and process death; swapping the provider
 requires no UI change; streaming can be cancelled.
 
-**Result: pending.** The branch is open and this line is filled in from the workflow run, not
-from expectation.
+**Result, 2026-09-17.** Pull request #4, workflow run
+[35275846429](https://github.com/iHOWi2/devour/actions/runs/35275846429): both jobs passed on the first
+attempt - lint, `format:check`, typecheck and 125 tests, then `gradle assembleDebug`, which
+compiled the two new Kotlin modules, the check that the packaged APK still contains
+`assets/index.android.bundle`, and the `devour-debug-apk` artefact. That is the CI level of
+verification and no more: the artefact from this run has not been installed on a phone yet.
 
 Where each clause stands, and by what evidence:
 
