@@ -91,7 +91,9 @@ jobs:
         id: install
         run: npm install --no-audit --no-fund 2>&1 | tee /tmp/install.log
 
-      # Best effort: the runner image usually already ships these packages.
+      # Best effort: the runner image usually already ships these packages, and the Android
+      # Gradle Plugin can fetch what is missing. The installed list is logged so a failure
+      # tells us which platforms the runner actually has.
       - name: Install Android SDK packages
         id: sdk
         run: |
@@ -100,7 +102,11 @@ jobs:
           else
             SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           fi
-          (yes | "$SDKMANAGER" "platforms;android-37" "build-tools;37.0.0" 2>&1 | tail -n 20 | tee /tmp/sdk.log) || true
+          {
+            (yes | "$SDKMANAGER" "platforms;android-37" "build-tools;37.0.0" 2>&1 | tail -n 5) || true
+            echo "--- installed platforms and build-tools ---"
+            ("$SDKMANAGER" --list_installed 2>/dev/null | grep -E 'platforms;|build-tools;') || true
+          } | tee /tmp/sdk.log
 
       # The Gradle wrapper JAR is not committed, so CI provisions Gradle itself.
       - name: Set up Gradle
