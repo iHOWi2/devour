@@ -11,7 +11,7 @@ working on your project, one thumb away, with nothing on screen that is not carr
   the identity, and it costs nothing in performance.
 - **Two themes, one instrument.** The light theme mirrors the same tension - cool ink on warm
   paper - instead of inverting lightness, which is how light themes end up grey and lifeless.
-- **One molten accent.** A single hot orange marks what the agent is doing *right now*, plus
+- **One molten accent.** A single hot orange marks what the agent is doing _right now_, plus
   the one action the user is meant to take. Spending it anywhere else destroys it.
 - **Machine data is monospaced.** Paths, commands, diff counts and device facts are mono
   because they are machine truth. Prose is never mono.
@@ -23,18 +23,18 @@ working on your project, one thumb away, with nothing on screen that is not carr
 Colour is declared as semantic roles, once per theme, in `src/design/theme.ts`. A component
 asks for a role and never for a hex value; that is what makes a second theme free.
 
-| Token | Dark | Light | Role |
-| --- | --- | --- | --- |
-| `background` | `#101519` | `#F4F1EC` | app background |
-| `surface` | `#171E24` | `#FBF9F6` | raised rows, sheets, tool cards, selected segments |
-| `edge` | `#25303A` | `#D8D1C6` | hairlines and dividers |
-| `text` | `#ECE7DF` | `#14181B` | primary text |
-| `muted` | `#8494A1` | `#5E6976` | labels, secondary text, inactive icons |
-| `accent` | `#FF4A17` | `#D53A0E` | active agent state, primary action, focus |
-| `onAccent` | `#101519` | `#FBF9F6` | text on an accent fill |
-| `ok` | `#5FD3A3` | `#0F7A55` | success, passing tests, clean status |
-| `warn` | `#E8B34A` | `#8A5D00` | attention, missing runtime, pending approval |
-| `danger` | `#F2645A` | `#B32D22` | destructive actions and failures |
+| Token        | Dark      | Light     | Role                                               |
+| ------------ | --------- | --------- | -------------------------------------------------- |
+| `background` | `#101519` | `#F4F1EC` | app background                                     |
+| `surface`    | `#171E24` | `#FBF9F6` | raised rows, sheets, tool cards, selected segments |
+| `edge`       | `#25303A` | `#D8D1C6` | hairlines and dividers                             |
+| `text`       | `#ECE7DF` | `#14181B` | primary text                                       |
+| `muted`      | `#8494A1` | `#5E6976` | labels, secondary text, inactive icons             |
+| `accent`     | `#FF4A17` | `#D53A0E` | active agent state, primary action, focus          |
+| `onAccent`   | `#101519` | `#FBF9F6` | text on an accent fill                             |
+| `ok`         | `#5FD3A3` | `#0F7A55` | success, passing tests, clean status               |
+| `warn`       | `#E8B34A` | `#8A5D00` | attention, missing runtime, pending approval       |
+| `danger`     | `#F2645A` | `#B32D22` | destructive actions and failures                   |
 
 Rules: `accent` never fills a large area; `ok`, `warn` and `danger` appear as 6 px state dots
 and short labels, never as banners; no colour is introduced outside this table; both themes
@@ -48,13 +48,13 @@ and the dark theme is the fallback when the device reports nothing.
 
 Two families: the platform sans for interface text, the platform mono for machine text.
 
-| Role | Size / line height | Use |
-| --- | --- | --- |
-| `display` | 44 / 44, tight tracking | one number or word per screen, at most |
-| `title` | 21 / 26 | screen subject, wordmark, error titles |
-| `body` | 15 / 22 | prose, agent messages, explanations |
-| `label` | 12 / 16, slight tracking | row labels, segment labels, metadata |
-| `mono` | 13 / 18 | paths, commands, versions, device facts |
+| Role      | Size / line height       | Use                                     |
+| --------- | ------------------------ | --------------------------------------- |
+| `display` | 44 / 44, tight tracking  | one number or word per screen, at most  |
+| `title`   | 21 / 26                  | screen subject, wordmark, error titles  |
+| `body`    | 15 / 22                  | prose, agent messages, explanations     |
+| `label`   | 12 / 16, slight tracking | row labels, segment labels, metadata    |
+| `mono`    | 13 / 18                  | paths, commands, versions, device facts |
 
 Rules: one `display` element per screen at most; prose is never mono; machine data is never
 sans; nothing smaller than `label`.
@@ -91,24 +91,71 @@ Devour speaks English and Russian, and the device decides which one without bein
   longer language, no layout depends on a fixed character count, and no string is truncated
   to make a row fit.
 
-## The chat is the interface (Phase 2+)
+## The chat is the interface (Phase 2)
 
-When the agent runtime exists, the screen is a conversation: user turns, agent prose, and
-collapsed tool cards in the flow. A tool call renders as one line with its state; opening it
-reveals the command and output. File changes render as a count with a file list behind it.
-Permission prompts are inline, show the exact command, and offer allow once, allow for
-session, or deny. No composer is drawn before there is something to send it to.
-
-## What the Phase 1 screen shows
-
-Only facts that are real, in the device's language:
+The conversation is the product surface. What ships today:
 
 ```
-  devour                                0.1.0
+  devour                             New   System
 
-  01
-  Фундамент
+                      ____________________________
+                     | Add Firebase authentication |
+                      ----------------------------
 
+  Here is what I would change:
+
+  +--------------------------------------------+
+  | gradle                                     |
+  | dependencies {                             |
+  |   implementation(platform("com.google..."))|
+  | }                                          |
+  +--------------------------------------------+
+
+  ----------------------------------------------
+  * responding
+  ----------------------------------------------
+  [ Describe a task                  ] [ Stop ]
+```
+
+- Two shapes, not two bubbles: the user's words sit on a raised surface, right-aligned and at
+  most 88% wide; the agent's answer sits directly on the chassis at full width. No tails, no
+  avatars, no name labels - the shape says who spoke, and prose reads better full width.
+- Code is monospace on a raised block with the language named when the model names it. A block
+  that is still arriving renders as it arrives instead of appearing at the end.
+- A stopped turn keeps the text that arrived and says it was stopped. A truncated answer with
+  no explanation looks like a bug.
+- One line above the composer carries state, and only when there is state: an accent dot while
+  responding, red with the endpoint's own words when a request failed, amber when the device
+  cannot save history. Each carries at most one action - retry, configure - because a state
+  the user cannot act on is a decoration. The detail line is monospace: it is machine text.
+- The composer grows to about six lines and then scrolls. `Send` becomes `Stop` while a stream
+  runs, in place: the button that started it is the button that ends it.
+- With no endpoint configured the screen shows the phase mark, one sentence about what is
+  missing, and the way to fix it. An empty conversation is never dressed up as a greeting.
+
+Tool cards, permission sheets and diffs are Phases 5 and 9 and are **not** pre-drawn.
+
+## What the system screen shows
+
+The second surface: what the agent talks to, what it runs on, what it looks like. Only facts
+that are real, in the device's language:
+
+```
+  devour                                    Чат
+
+  МОДЕЛЬ
+  Любой эндпоинт с протоколом чата OpenAI...
+
+  Эндпоинт
+  [ https://api.openai.com/v1              ]
+  Название модели
+  [ gpt-4o-mini                            ]
+  API-ключ            хранится в Android Keystore
+  [ оставь пустым, чтобы сохранить ключ     ]
+
+  [ Сохранить ]  Удалить ключ
+
+  ОКРУЖЕНИЕ
   Android        16 (API 36)
   Устройство     Google Pixel 8
   ABI            arm64-v8a
@@ -116,25 +163,24 @@ Only facts that are real, in the device's language:
   Память         41.2 GB свободно из 128 GB
   Файлы          /data/user/0/com.devour.app/files
   Runtime      • termux не установлен
-  ------------------------------------------
-  нативный мост подключён        Настройки
-```
 
-The settings row is the only control, and it is collapsed until asked for - persistent chrome
-has to earn its space:
-
-```
-  ------------------------------------------
+  ИНТЕРФЕЙС
   Тема
   [  Авто  ][ Тёмная ][ Светлая ]
   Язык
   [  Авто  ][   EN   ][   RU   ]
   ------------------------------------------
-  нативный мост подключён        Настройки
+  нативный мост подключён
 ```
 
-There is no fake chat input, no empty file tree and no placeholder terminal, because none of
-those exist yet. The screen tells the truth about what the build can do.
+The form names the field that is wrong - "the endpoint must be an http or https address" -
+rather than saying "invalid input". The API key field is write-only: a stored key is reported
+as stored, in the keystore, and is never rendered back into the field. Leaving it empty keeps
+the key that is already there, which is the only behaviour that lets the model name be
+changed without retyping a secret on a phone keyboard.
+
+There is no empty file tree and no placeholder terminal, because neither exists yet. Both
+screens tell the truth about what the build can do.
 
 ## Not doing
 

@@ -39,18 +39,26 @@ describe('dictionaries', () => {
 
   it('leaves no prose untranslated', () => {
     const prose: MessageKey[] = [
-      'phase.foundation',
+      'phase.chat',
       'status.reading',
       'bridge.connected',
       'failure.title',
       'action.retry',
       'row.device',
       'row.storage',
-      'settings.open',
+      'settings.interface',
       'settings.theme',
       'settings.language',
       'theme.dark',
       'theme.light',
+      'chat.send',
+      'chat.empty.ready',
+      'chat.empty.unconfigured',
+      'chat.waiting',
+      'error.provider.unauthorized',
+      'provider.apiKey.stored',
+      'provider.hint',
+      'system.environment',
     ];
 
     prose.forEach(key => {

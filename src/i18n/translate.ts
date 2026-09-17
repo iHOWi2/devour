@@ -36,7 +36,11 @@ export function resolveLanguage(
     return fallback;
   }
 
-  const primary = locale.trim().toLowerCase().split(/[-_.@]/)[0] ?? '';
+  const primary =
+    locale
+      .trim()
+      .toLowerCase()
+      .split(/[-_.@]/)[0] ?? '';
 
   return isLanguage(primary) ? primary : fallback;
 }

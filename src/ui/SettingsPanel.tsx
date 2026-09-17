@@ -1,30 +1,26 @@
-import React, {useMemo} from 'react';
-import {StyleSheet, View} from 'react-native';
+import React from 'react';
+import {View} from 'react-native';
 
 import {useThemeControl} from '../design/ThemeProvider';
-import type {Theme, ThemePreference} from '../design/theme';
-import {space} from '../design/tokens';
+import type {ThemePreference} from '../design/theme';
 import {useI18n} from '../i18n';
 import type {LanguagePreference} from '../i18n';
 import {SegmentedControl} from './SegmentedControl';
 import type {Segment} from './SegmentedControl';
 
 /**
- * The only settings this build has, and both are real: which theme paints the screen and
- * which language it speaks. Both default to the device and are overridable by hand.
+ * Appearance and language: the two settings that belong to the interface itself. Both
+ * default to the device and are overridable by hand, and both live for the session only -
+ * the settings store arrives in Phase 3.
  */
 export function SettingsPanel() {
-  const {
-    theme,
-    preference: themePreference,
-    setPreference: setThemePreference,
-  } = useThemeControl();
+  const {preference: themePreference, setPreference: setThemePreference} =
+    useThemeControl();
   const {
     t,
     preference: languagePreference,
     setPreference: setLanguagePreference,
   } = useI18n();
-  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const themeSegments: ReadonlyArray<Segment<ThemePreference>> = [
     {
@@ -57,7 +53,7 @@ export function SettingsPanel() {
   ];
 
   return (
-    <View style={styles.panel}>
+    <View>
       <SegmentedControl
         label={t('settings.theme')}
         onChange={setThemePreference}
@@ -72,14 +68,4 @@ export function SettingsPanel() {
       />
     </View>
   );
-}
-
-function createStyles(theme: Theme) {
-  return StyleSheet.create({
-    panel: {
-      paddingBottom: space.md,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: theme.palette.edge,
-    },
-  });
 }

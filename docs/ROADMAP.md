@@ -33,12 +33,12 @@ device. It was then tested by hand and **failed**; Phase 1.1 fixed the cause and
 CI, not guesswork, found four real defects. Each was fixed on the branch before the phase was
 declared done:
 
-| Defect | Fix |
-| --- | --- |
-| ESLint config referenced `prettier/prettier`, but `@react-native/eslint-config` 0.87 no longer ships the plugin | Prettier is a formatter here (`npm run format`), not an ESLint rule |
-| AGP 9 refuses `getDefaultProguardFile('proguard-android.txt')` because it carries `-dontoptimize` | use `proguard-android-optimize.txt` |
-| `MainActivity.kt` used `fabricEnabled` without importing it | import `DefaultNewArchitectureEntryPoint.fabricEnabled` |
-| the app theme referenced `@drawable/rn_edit_text_material`, which lives in app resources rather than the React Native AAR | added the drawable, same content as the React Native template |
+| Defect                                                                                                                    | Fix                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| ESLint config referenced `prettier/prettier`, but `@react-native/eslint-config` 0.87 no longer ships the plugin           | Prettier is a formatter here (`npm run format`), not an ESLint rule |
+| AGP 9 refuses `getDefaultProguardFile('proguard-android.txt')` because it carries `-dontoptimize`                         | use `proguard-android-optimize.txt`                                 |
+| `MainActivity.kt` used `fabricEnabled` without importing it                                                               | import `DefaultNewArchitectureEntryPoint.fabricEnabled`             |
+| the app theme referenced `@drawable/rn_edit_text_material`, which lives in app resources rather than the React Native AAR | added the drawable, same content as the React Native template       |
 
 One warning in the Android job is expected and harmless: `platforms;android-37` is not a
 package id on the GitHub runner, which ships `android-37.0`, `37.1` and `37.2`. The SDK step
@@ -48,9 +48,10 @@ is best effort and logs the installed packages; the Android Gradle Plugin resolv
 ## Phase 1.1 - Runnable APK, themes and language (done)
 
 Opened by the first install on a physical phone. The Phase 1 artefact installed, started, and
-died on a red screen: *"Unable to load script. Make sure you're running Metro or that your
-bundle 'index.android.bundle' is packaged correctly for release."* The stack ended in
+died on a red screen: _"Unable to load script. Make sure you're running Metro or that your
+bundle 'index.android.bundle' is packaged correctly for release."_ The stack ended in
 `loadJSBundleFromAssets`, which is React Native's fallback once no development server answers
+
 - and it failed because the APK contained no bundle at all.
 
 Delivered:
@@ -84,10 +85,10 @@ it.
 
 Two more defects, both caught by CI rather than by reading the code:
 
-| Defect | Fix |
-| --- | --- |
-| the debug APK shipped without `assets/index.android.bundle`, because the React Native Gradle plugin registers the bundling task only for variants that are *not* in `debuggableVariants` (default `['debug', 'debugOptimized']`) | `debuggableVariants = []`, plus a CI check on the packaged APK |
-| the theme layer reused React Native's `ColorSchemeName`, which is `'light' \| 'dark'`, while `useColorScheme()` returns `ColorSchemeName \| null` and an unset device reports nothing | the theme layer declares its own `DeviceColorScheme` and takes the widest honest input, instead of pushing a cast onto callers |
+| Defect                                                                                                                                                                                                                           | Fix                                                                                                                            |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| the debug APK shipped without `assets/index.android.bundle`, because the React Native Gradle plugin registers the bundling task only for variants that are _not_ in `debuggableVariants` (default `['debug', 'debugOptimized']`) | `debuggableVariants = []`, plus a CI check on the packaged APK                                                                 |
+| the theme layer reused React Native's `ColorSchemeName`, which is `'light' \| 'dark'`, while `useColorScheme()` returns `ColorSchemeName \| null` and an unset device reports nothing                                            | the theme layer declares its own `DeviceColorScheme` and takes the widest honest input, instead of pushing a cast onto callers |
 
 ## Phase 1.2 - Navigation of the project itself (done)
 
@@ -100,23 +101,90 @@ down before Phase 2 started.
   what the user asked for (in their own words), the rules of engagement, what is real versus
   specified, the toolchain, the skills and references to study before writing code, the
   environment constraints that shaped the repository, every defect already hit, and what
-  happens next
+  happens next. Phase 2 folded all of it into the documents that are updated as the code
+  changes - [../CONTRIBUTING.md](../CONTRIBUTING.md), [MAP.md](MAP.md),
+  [ARCHITECTURE.md](ARCHITECTURE.md), [RESEARCH.md](RESEARCH.md) and this file - and deleted
+  the audit: a second copy of the rules is a copy that goes stale.
 - the first defect found by a person rather than by CI, fixed in the same iteration
 
 **Exit criteria:** CI green; a newcomer can find any file and any decision from two documents;
 the device row reads correctly on real hardware.
 
-| Defect | Fix |
-| --- | --- |
+| Defect                                                                                                                                                                     | Fix                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | the device row printed the brand twice - "TECNO TECNO KJ6" - because Android reports `manufacturer` and `model` separately and many vendors put the brand inside the model | `formatDeviceName` in `src/lib/format.ts` prepends the brand only when the model does not already start with it; casing stays exactly as the platform reports it |
 
-## Phase 2 - Chat (next)
+## Phase 2 - Chat (done)
 
-Streaming responses, `ModelProvider` abstraction, conversation state, markdown and code block
-rendering, error and retry states.
+The first phase where Devour does something for the user rather than describing itself.
+
+Delivered:
+
+- **`ModelProvider` as the only door to a model.** One implementation ships,
+  `openai-compatible`: `POST {baseUrl}/chat/completions` with `stream: true`, `Authorization`
+  sent only when a key is held so a local llama.cpp or Ollama server works, and every HTTP,
+  transport and protocol failure mapped to one `AgentErrorCode`. Adding a second kind is a
+  file in `src/agent/providers/` plus a line in `createProvider`.
+- **Real streaming.** React Native's `fetch` has no readable body, so the transport is
+  `XMLHttpRequest` and reads `responseText` as it grows; the SSE decoder is written for
+  chunks that split anywhere, including mid-event and mid-UTF-8-line.
+- **Conversation state as a pure reducer.** `reduceConversation(conversation, event)` has no
+  effects, so the same event stream always produces the same conversation and the whole state
+  machine - streaming, cancelled, failed, retry - is tested without a renderer.
+- **Persistence, in Kotlin.** Two new native modules: `DevourStorage` writes named JSON
+  documents into `filesDir/documents` through a temporary file and a rename, and
+  `DevourSecrets` keeps the API key encrypted with AES/GCM under a non-extractable
+  AndroidKeyStore key. The conversation and the endpoint settings are documents; the key is a
+  secret and never enters React state or a log line.
+- **A chat that tells the truth.** Turns render markdown, including a code block that is
+  still arriving; the accent line appears only while a stream runs; Stop cancels the request
+  and keeps the partial answer as a cancelled turn; a failure shows what the endpoint said
+  with a retry that repeats the request; with no endpoint configured the screen says so and
+  offers the form instead of pretending to be a chat; when the document store is missing the
+  chat still works and says history is not being saved.
+- **Two surfaces, one switch.** `RootScreen` swaps chat and system without a navigation
+  library. The Phase 1 screen became `SystemScreen`: the endpoint form, the same real device
+  facts, and the theme and language controls.
+- **A streaming-tolerant markdown reader** (`src/lib/markdown.ts`): paragraphs, fenced code
+  with an open-fence state, headings, lists, quotes, rules, inline code, emphasis and links.
+  A library that waits for the closing fence would show nothing for seconds.
+- 38 new dictionary keys in both languages; 125 tests in 15 suites.
+- Repository chores that were blocked on network access: `package-lock.json` is committed, CI
+  installs with `npm ci` and caches npm, and `npm run format:check` is now a CI step - which
+  it had to be, because Prettier had never actually run in this repository before.
 
 **Exit criteria:** a conversation survives rotation and process death; swapping the provider
 requires no UI change; streaming can be cancelled.
+
+**Result, 2026-09-17.** Pull request #4, workflow run
+[35275846429](https://github.com/iHOWi2/devour/actions/runs/35275846429): both jobs passed on the first
+attempt - lint, `format:check`, typecheck and 125 tests, then `gradle assembleDebug`, which
+compiled the two new Kotlin modules, the check that the packaged APK still contains
+`assets/index.android.bundle`, and the `devour-debug-apk` artefact. That is the CI level of
+verification and no more: the artefact from this run has not been installed on a phone yet.
+
+Where each clause stands, and by what evidence:
+
+| Clause                                   | Mechanism                                                                                                                                                     | Evidence                                                                          |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| survives rotation                        | `MainActivity` declares `orientation` and `screenSize` in `configChanges`, so the activity is not recreated, and the session lives in a ref above the screens | unit level; a phone has to confirm it                                             |
+| survives process death                   | the conversation is a document, read once at startup; a turn left `streaming` is settled to `cancelled` on load                                               | `session.test.ts` hydrates a stored conversation; a phone has to confirm the rest |
+| swapping the provider needs no UI change | screens import `useAgent` and `SessionState` only; no screen names a provider                                                                                 | `ChatScreen.test.tsx` drives the screen through an injected fake provider         |
+| streaming can be cancelled               | `ModelRequest.signal` -> `xhr.abort()` -> `StreamCancelledError` -> `message.cancelled`                                                                       | `session.test.ts` and `ChatScreen.test.tsx` both stop a running stream            |
+
+What Phase 2 does **not** claim: nobody has yet watched Devour stream from a real endpoint on
+a phone. The provider is tested against a fake transport, and the transport is tested against
+a fake `XMLHttpRequest`. Live streaming, keyboard behaviour with the composer, and the
+restore path after a real process kill are hardware-level facts and stay unverified until the
+author installs the artefact and reports back.
+
+Defects found while building the phase:
+
+| Defect                                                                                                                                                                                                                                                            | Fix                                                                                                              |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `jest.resetAllMocks()` in a suite's `afterEach` also wiped the implementations inside `react-native-safe-area-context`'s own mock, which is built from `jest.fn()`; `useSafeAreaInsets()` then returned `undefined` and twelve tests failed inside `createStyles` | reset only the mock the suite owns; the shared mock is installed once in `jest.setup.js`                         |
+| the jest mock shipped by `react-native-safe-area-context` is a default export, so `jest.mock('react-native-safe-area-context', () => require('.../jest/mock'))` installs a module namespace whose hooks are all `undefined`                                       | the setup file installs `require('react-native-safe-area-context/jest/mock').default`                            |
+| Prettier had never run in this repository - the sandbox that built Phases 0-1.2 could not install it - so committed files were formatted by hand and `npm run format:check` would have failed                                                                     | ran the formatter over everything and made `format:check` a CI step, with the version pinned by the new lockfile |
 
 ## Phase 3 - Workspace
 
@@ -207,14 +275,20 @@ Signed release APK, GitHub release with artefacts, user documentation, release a
 
 Tracked so it is not forgotten, and not pretended away:
 
-- persist the theme and language choice; there is no settings store before Phase 3, so today
-  the choice lives for the session and the device setting is the default
-- commit `package-lock.json` once it is generated on a machine with network access; switch CI
-  to `npm ci`
+- persist the theme and language choice: the document store exists as of Phase 2, so what is
+  left is the preference documents and hydrating them before the first paint - Phase 3 owns it
+  with the rest of the settings
+- one conversation, not many: there is no conversation list, no title and no switching.
+  `reduceConversation` is per-conversation already, so this is a storage and UI question for
+  the phase that needs it
+- no context-window accounting: a long conversation is truncated at 200 turns by the store and
+  nothing measures tokens. Real context assembly belongs with skills and tools (Phases 5-6)
+- retry repeats the last user turn; there is no per-turn edit or regenerate
+- only the OpenAI-compatible protocol is implemented; Anthropic and Gemini shapes are separate
+  provider kinds when they are needed
 - commit the Gradle wrapper (`gradlew`, `gradle-wrapper.jar`) generated locally
 - migrate `DevourEnvironment` to a codegen TurboModule spec (Phase 4)
 - multi-architecture debug builds in CI (currently `arm64-v8a` for speed)
-- enforce Prettier formatting as a CI error once the toolchain is pinned by a lockfile
 - `release.yml` is unverified: it runs only on a `v*` tag, and no tag exists yet
 - replace the deprecated `DefaultReactActivityDelegate` flags constructor
 - revisit `android.newDsl=false` and `android.builtInKotlin=false` before AGP 10

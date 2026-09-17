@@ -40,24 +40,24 @@ requires: []
 Imperative instructions for doing the work...
 ```
 
-| Field | Required | Notes |
-| --- | --- | --- |
-| `name` | yes | lowercase, hyphenated, unique within its scope |
-| `description` | yes | third person, states what it does **and when to use it**; this is the only text always in context |
-| `version` | no | semver |
-| `license` | no | for redistributable skills |
-| `tags` | no | discovery hints |
-| `requires` | no | other skill names that must load with it |
+| Field         | Required | Notes                                                                                             |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| `name`        | yes      | lowercase, hyphenated, unique within its scope                                                    |
+| `description` | yes      | third person, states what it does **and when to use it**; this is the only text always in context |
+| `version`     | no       | semver                                                                                            |
+| `license`     | no       | for redistributable skills                                                                        |
+| `tags`        | no       | discovery hints                                                                                   |
+| `requires`    | no       | other skill names that must load with it                                                          |
 
 ## Progressive disclosure
 
 Three levels, loaded only as far as needed:
 
-| Level | Content | Budget |
-| --- | --- | --- |
-| 1 | `name` + `description` of every discovered skill | ~100 words per skill, always present |
-| 2 | the body of `SKILL.md` for activated skills | under 5,000 words, 1,500-2,000 preferred |
-| 3 | files under `references/`, `examples/`, `scripts/` | unbounded, fetched by path when the body points at them |
+| Level | Content                                            | Budget                                                  |
+| ----- | -------------------------------------------------- | ------------------------------------------------------- |
+| 1     | `name` + `description` of every discovered skill   | ~100 words per skill, always present                    |
+| 2     | the body of `SKILL.md` for activated skills        | under 5,000 words, 1,500-2,000 preferred                |
+| 3     | files under `references/`, `examples/`, `scripts/` | unbounded, fetched by path when the body points at them |
 
 The body must not duplicate its references; it points to them: "for the full type scale see
 `references/type-scale.md`". Large references get a grep hint so the agent can search instead
@@ -67,11 +67,11 @@ of reading everything.
 
 Skills are discovered from three scopes, highest precedence first:
 
-| Scope | Location | Meaning |
-| --- | --- | --- |
-| project | `<project>/.devour/skills/` | rules for this codebase, committed with it |
-| workspace | `<workspace>/.devour/skills/` | rules shared across the user's projects |
-| global | app data directory | user's personal skills, available everywhere |
+| Scope     | Location                      | Meaning                                      |
+| --------- | ----------------------------- | -------------------------------------------- |
+| project   | `<project>/.devour/skills/`   | rules for this codebase, committed with it   |
+| workspace | `<workspace>/.devour/skills/` | rules shared across the user's projects      |
+| global    | app data directory            | user's personal skills, available everywhere |
 
 A project skill with the same `name` as a global one replaces it. Discovery is a filesystem
 scan plus frontmatter parse; malformed frontmatter makes a skill invisible and produces a
