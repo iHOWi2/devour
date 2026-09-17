@@ -155,7 +155,7 @@ class DevourSecretsModule(private val reactAppContext: ReactApplicationContext) 
   private fun entry(key: String): String {
     if (!KEY_PATTERN.matches(key)) {
       throw IllegalArgumentException(
-          "\"$key\" is not a secret name: use lowercase letters, digits, dot, dash or underscore")
+          "\"$key\" is not a secret name: letters, digits, dot, dash or underscore")
     }
 
     return key
@@ -177,6 +177,6 @@ class DevourSecretsModule(private val reactAppContext: ReactApplicationContext) 
     private const val TAG_BITS: Int = 128
     private const val ERROR_KEY: String = "devour_secrets_invalid_key"
     private const val ERROR_FAILED: String = "devour_secrets_failed"
-    private val KEY_PATTERN: Regex = Regex("^[a-z0-9][a-z0-9._-]{0,63}$")
+    private val KEY_PATTERN: Regex = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
   }
 }
