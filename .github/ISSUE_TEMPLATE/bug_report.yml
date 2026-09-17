@@ -1,6 +1,6 @@
 name: Bug report
 description: Something in Devour does not work
-labels: ["bug"]
+labels: ['bug']
 body:
   - type: textarea
     id: summary

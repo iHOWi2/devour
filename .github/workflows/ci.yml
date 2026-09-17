@@ -25,18 +25,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # No npm cache: package-lock.json is not committed yet (see docs/ROADMAP.md).
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Install dependencies
         id: install
-        run: npm install --no-audit --no-fund 2>&1 | tee /tmp/install.log
+        run: npm ci --no-audit --no-fund 2>&1 | tee /tmp/install.log
 
       - name: Lint
         id: lint
         run: npm run lint 2>&1 | tee /tmp/lint.log
+
+      - name: Format
+        id: format
+        run: npm run format:check 2>&1 | tee /tmp/format.log
 
       - name: Typecheck
         id: typecheck
@@ -57,7 +61,7 @@ jobs:
           {
             echo "### CI failure - JavaScript job"
             echo
-            for name in install lint typecheck test; do
+            for name in install lint format typecheck test; do
               if [ -f "/tmp/$name.log" ]; then
                 echo "<details><summary>$name (last 80 lines)</summary>"
                 echo
@@ -81,6 +85,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - uses: actions/setup-java@v4
         with:
@@ -89,7 +94,7 @@ jobs:
 
       - name: Install dependencies
         id: install
-        run: npm install --no-audit --no-fund 2>&1 | tee /tmp/install.log
+        run: npm ci --no-audit --no-fund 2>&1 | tee /tmp/install.log
 
       # Best effort: the runner image usually already ships these packages, and the Android
       # Gradle Plugin can fetch what is missing. The installed list is logged so a failure
