@@ -1,0 +1,109 @@
+# Release build.
+#
+# Untested until the first v* tag is pushed - do not describe it as verified before then.
+# Signing is optional: without the keystore secrets the APK is produced unsigned, which is
+# the honest outcome until Phase 11 completes release signing.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  apk:
+    name: release apk
+    runs-on: ubuntu-latest
+    env:
+      DEVOUR_RELEASE_KEYSTORE_BASE64: ${{ secrets.DEVOUR_RELEASE_KEYSTORE_BASE64 }}
+      DEVOUR_RELEASE_STORE_PASSWORD: ${{ secrets.DEVOUR_RELEASE_STORE_PASSWORD }}
+      DEVOUR_RELEASE_KEY_ALIAS: ${{ secrets.DEVOUR_RELEASE_KEY_ALIAS }}
+      DEVOUR_RELEASE_KEY_PASSWORD: ${{ secrets.DEVOUR_RELEASE_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Android SDK packages
+        run: |
+          if command -v sdkmanager >/dev/null 2>&1; then
+            SDKMANAGER=sdkmanager
+          else
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          (yes | "$SDKMANAGER" "platforms;android-37" "build-tools;37.0.0" 2>&1 | tail -n 20) || true
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 9.4.1
+
+      - name: Decode signing keystore
+        if: env.DEVOUR_RELEASE_KEYSTORE_BASE64 != ''
+        run: |
+          printf '%s' "$DEVOUR_RELEASE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/devour-release.jks"
+          echo "DEVOUR_RELEASE_STORE_FILE=$RUNNER_TEMP/devour-release.jks" >> "$GITHUB_ENV"
+
+      - name: Assemble release APK
+        working-directory: android
+        run: gradle assembleRelease --no-daemon
+
+      - name: Collect artefact
+        id: artefact
+        run: |
+          apk=$(find android/app/build/outputs/apk/release -name '*.apk' -print -quit)
+          if [ -z "$apk" ]; then
+            echo "No APK was produced." >&2
+            exit 1
+          fi
+          name="devour-${GITHUB_REF_NAME}.apk"
+          cp "$apk" "$RUNNER_TEMP/$name"
+          echo "path=$RUNNER_TEMP/$name" >> "$GITHUB_OUTPUT"
+          if [ -n "${DEVOUR_RELEASE_STORE_FILE:-}" ]; then
+            echo "signed=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "signed=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: devour-release-apk
+          path: ${{ steps.artefact.outputs.path }}
+          if-no-files-found: error
+
+      - name: Attach to GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APK: ${{ steps.artefact.outputs.path }}
+          SIGNED: ${{ steps.artefact.outputs.signed }}
+        run: |
+          {
+            echo "Automated build of ${GITHUB_REF_NAME}."
+            if [ "$SIGNED" != "yes" ]; then
+              echo
+              echo "This APK is UNSIGNED: no release keystore was configured for this build."
+            fi
+          } > "$RUNNER_TEMP/notes.md"
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
+          gh release upload "$GITHUB_REF_NAME" "$APK" --clobber
