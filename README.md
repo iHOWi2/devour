@@ -54,19 +54,33 @@ Local Runtime               Termux today, replaceable behind an interface
 Real workspace on the device
 ```
 
-Layer contracts and boundary rules live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-The visual language lives in [docs/DESIGN.md](docs/DESIGN.md). The skill format lives in
-[docs/SKILL-SYSTEM.md](docs/SKILL-SYSTEM.md).
+## Documentation
+
+| Document | What it answers |
+| --- | --- |
+| [docs/MAP.md](docs/MAP.md) | where every file lives and where new work belongs |
+| [AUDIT.txt](AUDIT.txt) | handoff briefing: the project, the user's requirements, the rules, the landmines |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | layer contracts, import rules, decisions log |
+| [docs/DESIGN.md](docs/DESIGN.md) | visual direction, palettes, type, spacing, motion, quality floor |
+| [docs/SKILL-SYSTEM.md](docs/SKILL-SYSTEM.md) | the Devour skill format and how skills load |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | phases, exit criteria, defects closed, deferred work |
+| [docs/RESEARCH.md](docs/RESEARCH.md) | Phase 0 findings and version research |
+
+Start with `AUDIT.txt` if you are new to the project, then `docs/MAP.md`.
 
 ## Current status
 
-**Phase 1 - Foundation: done and verified in CI.** Workflow run
-[35265672687](https://github.com/iHOWi2/devour/actions/runs/35265672687), 2026-09-17:
+**Phase 1 - Foundation: done, verified in CI and on a real phone.** Workflow run
+[35266328515](https://github.com/iHOWi2/devour/actions/runs/35266328515), 2026-09-17:
 
 - `lint, typecheck, tests` - passed
 - `android debug apk` - passed: `gradle assembleDebug` produced
   `android/app/build/outputs/apk/debug/app-debug.apk`, the packaged APK is checked to contain
   `assets/index.android.bundle`, and it is uploaded as the `devour-debug-apk` artifact
+- that artifact was installed on a TECNO KJ6 (Android 13, API 33, arm64-v8a) with no
+  development server running: the app launches, reports real device and storage facts,
+  detects Termux 0.119.0-beta.3 as the runtime host, and picks Russian and the dark theme
+  from the device settings
 
 What exists in code today:
 
@@ -92,13 +106,10 @@ every artifact is self-contained, and CI now fails when the bundle is missing in
 shipping an APK that cannot start. A running Metro still takes priority, so fast refresh is
 unchanged.
 
-What is **not** proven yet: this APK has not been launched on hardware. The previous one was,
-and it failed at exactly the point described above, so the check stays open until a build
-from CI starts on a real device. Theme and language choices also live for the session only;
-there is no settings store before Phase 3, and a fake one would be a lie.
-
-The agent runtime, tools, skills, MCP and connectors are **specified in `docs/`, not stubbed
-in code**. They arrive phase by phase, each with working behaviour.
+What is **not** done yet: theme and language choices live for the session only, because
+there is no settings store before Phase 3 and a fake one would be a lie. The agent runtime,
+tools, skills, MCP and connectors are **specified in `docs/`, not stubbed in code**. They
+arrive phase by phase, each with working behaviour.
 
 ## Requirements
 
@@ -151,8 +162,11 @@ Android code changed. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Project layout
 
+Full annotated map, including where new work belongs: [docs/MAP.md](docs/MAP.md).
+
 ```
 .
+|-- AUDIT.txt                    handoff briefing for the next developer
 |-- android/                     Gradle project and Kotlin native layer
 |   `-- app/src/main/java/com/devour/app/
 |       |-- MainApplication.kt
@@ -167,7 +181,7 @@ Android code changed. See [CONTRIBUTING.md](CONTRIBUTING.md).
 |   |-- screens/                 FoundationScreen - the Phase 1 status screen
 |   `-- ui/                      small presentational components
 |-- __tests__/                   Jest unit tests
-|-- docs/                        architecture, design, skills, roadmap, research
+|-- docs/                        map, architecture, design, skills, roadmap, research
 `-- .github/workflows/           CI and release pipelines
 ```
 
@@ -186,7 +200,7 @@ Android code changed. See [CONTRIBUTING.md](CONTRIBUTING.md).
 | 7 | MCP: server configuration, discovery, invocation, lifecycle, permissions | planned |
 | 8 | Connectors: one real connector plus an extensible layer | planned |
 | 9 | Agent UX: tool cards, permission prompts, diffs, undo, error recovery | planned |
-| 10 | Polish: motion, accessibility, performance, keyboard and gestures | planned |
+| 10 | Polish: motion and transitions, accessibility, performance, keyboard and gestures | planned |
 | 11 | Release: signed APK, GitHub release, documentation | planned |
 
 Full deliverables and exit criteria per phase: [docs/ROADMAP.md](docs/ROADMAP.md).
