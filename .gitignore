@@ -1,0 +1,50 @@
+# OS
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.npm/
+
+# Metro
+.metro-health-check*
+*.jsbundle
+
+# Testing
+/coverage
+
+# TypeScript
+*.tsbuildinfo
+
+# Android / Gradle
+build/
+.gradle/
+local.properties
+*.iml
+*.hprof
+.cxx/
+.kotlin/
+captures/
+
+# Generated Gradle wrapper binary (see scripts/bootstrap-gradle-wrapper.sh)
+gradle-wrapper.jar
+
+# Signing material
+*.keystore
+*.jks
+keystore.properties
+
+# Build outputs
+*.apk
+*.aab
+
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# Environment
+.env
+.env.*
+!.env.example

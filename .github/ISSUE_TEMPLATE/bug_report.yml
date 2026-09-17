@@ -1,0 +1,32 @@
+name: Bug report
+description: Something in Devour does not work
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: area
+    attributes:
+      label: Area
+      description: chat, workspace, runtime, tools, skills, MCP, connectors, build
+    validations:
+      required: false
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: Pixel 7, Android 15
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or command output
+      render: shell
+    validations:
+      required: false
