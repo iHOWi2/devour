@@ -1,4 +1,12 @@
-import type {ColorSchemeName} from 'react-native';
+/**
+ * What a device can actually tell us about its appearance setting.
+ *
+ * React Native exports `ColorSchemeName` as `'light' | 'dark'`, but `useColorScheme()`
+ * returns `ColorSchemeName | null`, and a device that has never expressed a preference
+ * reports nothing at all. The theme layer therefore accepts the widest honest input and
+ * decides for itself, instead of pushing a cast onto every caller.
+ */
+export type DeviceColorScheme = 'light' | 'dark' | null | undefined;
 
 /**
  * Semantic colour tokens. A component asks for a role - `surface`, `danger`, `onAccent` -
@@ -85,7 +93,7 @@ export const DEFAULT_THEME_NAME: ThemeName = 'dark';
 
 export function resolveThemeName(
   preference: ThemePreference,
-  scheme: ColorSchemeName,
+  scheme: DeviceColorScheme,
 ): ThemeName {
   if (preference !== 'system') {
     return preference;
@@ -96,7 +104,7 @@ export function resolveThemeName(
 
 export function resolveTheme(
   preference: ThemePreference,
-  scheme: ColorSchemeName,
+  scheme: DeviceColorScheme,
 ): Theme {
   return themes[resolveThemeName(preference, scheme)];
 }
