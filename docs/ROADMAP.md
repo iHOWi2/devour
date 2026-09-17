@@ -28,7 +28,7 @@ app launches and shows real device and runtime-host facts.
 [35260611596](https://github.com/iHOWi2/devour/actions/runs/35260611596): both jobs passed and
 `app-debug.apk` was uploaded as the `devour-debug-apk` artifact. The third clause - launching
 on hardware - was left unverified, because the environment that produced this phase has no
-device. It was then tested by hand and **failed**: see Phase 1.1.
+device. It was then tested by hand and **failed**; Phase 1.1 fixed the cause and closed it.
 
 CI, not guesswork, found four real defects. Each was fixed on the branch before the phase was
 declared done:
@@ -74,9 +74,13 @@ and the app starts on a device with no development server, in the device's langu
 appearance.
 
 **Result, 2026-09-17.** Pull request #2, workflow run
-[35265672687](https://github.com/iHOWi2/devour/actions/runs/35265672687): both jobs passed and
-the new check confirmed the bundle is inside the APK. The device clause stays open until the
-artefact from that run has been installed and launched.
+[35266328515](https://github.com/iHOWi2/devour/actions/runs/35266328515): both jobs passed and
+the new check confirmed the bundle is inside the APK. The artefact from that run was then
+installed on a TECNO KJ6 (Android 13, API 33, arm64-v8a, 8 cores) with no development server:
+the app launches, renders real device and storage facts, detects Termux 0.119.0-beta.3 as the
+runtime host, reports the native bridge connected, and picks Russian and the dark theme from
+the device settings. **All three clauses hold**, and the open Phase 1 clause is closed with
+it.
 
 Two more defects, both caught by CI rather than by reading the code:
 
@@ -85,11 +89,31 @@ Two more defects, both caught by CI rather than by reading the code:
 | the debug APK shipped without `assets/index.android.bundle`, because the React Native Gradle plugin registers the bundling task only for variants that are *not* in `debuggableVariants` (default `['debug', 'debugOptimized']`) | `debuggableVariants = []`, plus a CI check on the packaged APK |
 | the theme layer reused React Native's `ColorSchemeName`, which is `'light' \| 'dark'`, while `useColorScheme()` returns `ColorSchemeName \| null` and an unset device reports nothing | the theme layer declares its own `DeviceColorScheme` and takes the widest honest input, instead of pushing a cast onto callers |
 
+## Phase 1.2 - Navigation of the project itself (done)
+
+A repository nobody can navigate slows every later phase, so this short iteration paid that
+down before Phase 2 started.
+
+- [MAP.md](MAP.md): every file with its purpose, a "where do I put this?" table, the import
+  rules between layers, and a symptom-to-file table for debugging
+- `AUDIT.txt` in the repository root: a plain-text handoff briefing - what the project is,
+  what the user asked for (in their own words), the rules of engagement, what is real versus
+  specified, the toolchain, the skills and references to study before writing code, the
+  environment constraints that shaped the repository, every defect already hit, and what
+  happens next
+- the first defect found by a person rather than by CI, fixed in the same iteration
+
+**Exit criteria:** CI green; a newcomer can find any file and any decision from two documents;
+the device row reads correctly on real hardware.
+
+| Defect | Fix |
+| --- | --- |
+| the device row printed the brand twice - "TECNO TECNO KJ6" - because Android reports `manufacturer` and `model` separately and many vendors put the brand inside the model | `formatDeviceName` in `src/lib/format.ts` prepends the brand only when the model does not already start with it; casing stays exactly as the platform reports it |
+
 ## Phase 2 - Chat (next)
 
 Streaming responses, `ModelProvider` abstraction, conversation state, markdown and code block
-rendering, error and retry states. Also closes the open Phase 1.1 clause: install and launch
-the bundled debug APK on a real device.
+rendering, error and retry states.
 
 **Exit criteria:** a conversation survives rotation and process death; swapping the provider
 requires no UI change; streaming can be cancelled.
@@ -97,6 +121,8 @@ requires no UI change; streaming can be cancelled.
 ## Phase 3 - Workspace
 
 Project selection, scoped filesystem access, file tree, workspace state and project metadata.
+This phase brings the settings store, which is what finally lets the theme and language
+choice persist.
 
 **Exit criteria:** a real project directory on the device can be opened, browsed and
 remembered, with permissions handled honestly.
@@ -142,6 +168,9 @@ no core change.
 ## Phase 9 - Agent UX
 
 Tool cards, permission sheets, progress, change sets, diff view, undo, accept, error recovery.
+The first phase where motion does real work: a tool card moving through pending, running and
+finished states, and a change set opening into a diff, are state transitions the user has to
+be able to follow.
 
 **Exit criteria:** after any agent run the user can see what changed and undo it.
 
@@ -149,7 +178,24 @@ Tool cards, permission sheets, progress, change sets, diff view, undo, accept, e
 
 Motion, accessibility, performance, keyboard handling, gestures, one-handed reachability.
 
-**Exit criteria:** the quality floor in [DESIGN.md](DESIGN.md) holds on every screen.
+The motion work is scoped and researched, not improvised (2026-09-17):
+
+- `react-native-reanimated` 4.6.0, released 2026-08-21, supports React Native 0.83-0.87 and
+  requires the new architecture, which Devour already runs. It pairs with Worklets 0.12.x.
+  Reanimated 4 adds CSS-style animations and transitions plus layout transitions, which is
+  the shape this project needs: declarative state transitions, not hand-driven values.
+- shared element transitions exist in Reanimated and React Navigation but both still label
+  them experimental. They may be used as an accent, never as a foundation.
+- LottieFiles publishes a motion-design skill (timing, easing, choreography) that fits the
+  Devour skill format and is worth adapting rather than reinventing:
+  <https://github.com/lottiefiles/motion-design-skill>
+- the existing `motion` tokens in [DESIGN.md](DESIGN.md) - 120 ms for state, 200 ms for
+  entrance, 320 ms for orchestrated sequences - stay the source of truth for durations.
+- no animation dependency is installed before the phase that uses it. The first real use is
+  Phase 9; Phase 10 is where it becomes a system.
+
+**Exit criteria:** the quality floor in [DESIGN.md](DESIGN.md) holds on every screen, and
+every transition either communicates a state change or is removed.
 
 ## Phase 11 - Release
 
@@ -161,8 +207,6 @@ Signed release APK, GitHub release with artefacts, user documentation, release a
 
 Tracked so it is not forgotten, and not pretended away:
 
-- install and launch the bundled `app-debug.apk` on a physical device (open half of
-  Phase 1.1)
 - persist the theme and language choice; there is no settings store before Phase 3, so today
   the choice lives for the session and the device setting is the default
 - commit `package-lock.json` once it is generated on a machine with network access; switch CI
@@ -172,3 +216,6 @@ Tracked so it is not forgotten, and not pretended away:
 - multi-architecture debug builds in CI (currently `arm64-v8a` for speed)
 - enforce Prettier formatting as a CI error once the toolchain is pinned by a lockfile
 - `release.yml` is unverified: it runs only on a `v*` tag, and no tag exists yet
+- replace the deprecated `DefaultReactActivityDelegate` flags constructor
+- revisit `android.newDsl=false` and `android.builtInKotlin=false` before AGP 10
+- validate Reanimated 4.6 against this toolchain in the phase that installs it
