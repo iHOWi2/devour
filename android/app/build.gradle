@@ -1,0 +1,69 @@
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+
+/**
+ * Devour keeps the official React Native application configuration so upgrades stay
+ * mechanical. Deliberate differences from the template:
+ *
+ *  - no committed debug keystore: debug builds use the Android Gradle Plugin's managed one
+ *  - release signing comes from environment variables, so no secret lives in the repository
+ *  - ndkVersion is not pinned: the app ships no C++ of its own
+ */
+
+react {
+    autolinkLibrariesWithApp()
+}
+
+def enableProguardInReleaseBuilds = false
+def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+def releaseStoreFile = System.getenv("DEVOUR_RELEASE_STORE_FILE")
+
+android {
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk rootProject.ext.compileSdkVersion
+
+    namespace "com.devour.app"
+
+    defaultConfig {
+        applicationId "com.devour.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "0.1.0"
+    }
+
+    signingConfigs {
+        if (releaseStoreFile) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword System.getenv("DEVOUR_RELEASE_STORE_PASSWORD")
+                keyAlias System.getenv("DEVOUR_RELEASE_KEY_ALIAS")
+                keyPassword System.getenv("DEVOUR_RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // Unsigned unless the signing environment variables are present. Phase 11 finishes
+            // release signing; until then an unsigned artefact is the honest outcome.
+            if (releaseStoreFile) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled enableProguardInReleaseBuilds
+            // AGP 9 rejects the non-optimizing defaults, which carried -dontoptimize.
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation jscFlavor
+    }
+}

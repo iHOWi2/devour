@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose a capability for a roadmap phase
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is hard or impossible today, on a phone, in a real project?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: The smallest version that would actually work.
+    validations:
+      required: true
+  - type: input
+    id: phase
+    attributes:
+      label: Related phase
+      placeholder: Phase 5 - Agent tools
+    validations:
+      required: false

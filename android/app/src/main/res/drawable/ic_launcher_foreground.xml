@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- A prompt: molten caret over a bone rule. Drawn inside the adaptive icon safe zone. -->
+    <path
+        android:pathData="M42,36 L60,54 L42,72"
+        android:strokeColor="#FF4A17"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="9" />
+    <path
+        android:pathData="M40,82 L72,82"
+        android:strokeColor="#ECE7DF"
+        android:strokeLineCap="round"
+        android:strokeWidth="7" />
+</vector>

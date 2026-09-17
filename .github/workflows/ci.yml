@@ -1,0 +1,151 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  js:
+    name: lint, typecheck, tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No npm cache: package-lock.json is not committed yet (see docs/ROADMAP.md).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        id: install
+        run: npm install --no-audit --no-fund 2>&1 | tee /tmp/install.log
+
+      - name: Lint
+        id: lint
+        run: npm run lint 2>&1 | tee /tmp/lint.log
+
+      - name: Typecheck
+        id: typecheck
+        run: npm run typecheck 2>&1 | tee /tmp/typecheck.log
+
+      - name: Tests
+        id: test
+        run: npm test 2>&1 | tee /tmp/test.log
+
+      # Failures are reported back onto the pull request so the log is readable where the
+      # change is reviewed, not only inside the Actions UI.
+      - name: Report failure on the pull request
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo "### CI failure - JavaScript job"
+            echo
+            for name in install lint typecheck test; do
+              if [ -f "/tmp/$name.log" ]; then
+                echo "<details><summary>$name (last 80 lines)</summary>"
+                echo
+                echo '```'
+                tail -n 80 "/tmp/$name.log"
+                echo '```'
+                echo
+                echo "</details>"
+                echo
+              fi
+            done
+          } > /tmp/report.md
+          gh pr comment "$PR_NUMBER" --body-file /tmp/report.md
+
+  android:
+    name: android debug apk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        id: install
+        run: npm install --no-audit --no-fund 2>&1 | tee /tmp/install.log
+
+      # Best effort: the runner image usually already ships these packages, and the Android
+      # Gradle Plugin can fetch what is missing. The installed list is logged so a failure
+      # tells us which platforms the runner actually has.
+      - name: Install Android SDK packages
+        id: sdk
+        run: |
+          if command -v sdkmanager >/dev/null 2>&1; then
+            SDKMANAGER=sdkmanager
+          else
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          {
+            (yes | "$SDKMANAGER" "platforms;android-37" "build-tools;37.0.0" 2>&1 | tail -n 5) || true
+            echo "--- installed platforms and build-tools ---"
+            ("$SDKMANAGER" --list_installed 2>/dev/null | grep -E 'platforms;|build-tools;') || true
+          } | tee /tmp/sdk.log
+
+      # The Gradle wrapper JAR is not committed, so CI provisions Gradle itself.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 9.4.1
+
+      - name: Assemble debug APK
+        id: assemble
+        working-directory: android
+        run: gradle assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon 2>&1 | tee /tmp/assemble.log
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: devour-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Report failure on the pull request
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo "### CI failure - Android job"
+            echo
+            for name in install sdk assemble; do
+              if [ -f "/tmp/$name.log" ]; then
+                echo "<details><summary>$name (last 120 lines)</summary>"
+                echo
+                echo '```'
+                tail -n 120 "/tmp/$name.log"
+                echo '```'
+                echo
+                echo "</details>"
+                echo
+              fi
+            done
+          } > /tmp/report.md
+          gh pr comment "$PR_NUMBER" --body-file /tmp/report.md
