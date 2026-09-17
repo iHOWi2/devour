@@ -13,7 +13,7 @@ import type {Theme} from '../design/theme';
 import {TOUCH_TARGET, radius, space, typography} from '../design/tokens';
 import {useI18n} from '../i18n';
 import type {MessageKey, Translator} from '../i18n';
-import {formatBytes} from '../lib/format';
+import {formatBytes, formatDeviceName} from '../lib/format';
 import {readEnvironment} from '../native';
 import type {DeviceEnvironment} from '../native';
 import {DataRow} from '../ui/DataRow';
@@ -140,7 +140,10 @@ export function FoundationScreen() {
             />
             <DataRow
               label={t('row.device')}
-              value={`${state.environment.manufacturer} ${state.environment.model}`}
+              value={formatDeviceName(
+                state.environment.manufacturer,
+                state.environment.model,
+              )}
             />
             <DataRow label={t('row.abi')} value={state.environment.abi} />
             <DataRow
