@@ -12,26 +12,39 @@ import com.facebook.react.module.model.ReactModuleInfoProvider
  * BaseReactPackage is the current API: ReactPackage.createNativeModules is deprecated in React
  * Native 0.87, and this form instantiates modules lazily. Migrating to codegen TurboModule
  * specs is scheduled for Phase 4, when the native surface grows to processes and PTY.
+ *
+ * A module missing from either half of this file is a module JavaScript cannot see. The
+ * TypeScript side treats that as "unavailable" and says so on screen (src/native/bridge.ts).
  */
 class DevourNativePackage : BaseReactPackage() {
 
   override fun getModule(name: String, reactContext: ReactApplicationContext): NativeModule? =
       when (name) {
         DevourEnvironmentModule.NAME -> DevourEnvironmentModule(reactContext)
+        DevourStorageModule.NAME -> DevourStorageModule(reactContext)
+        DevourSecretsModule.NAME -> DevourSecretsModule(reactContext)
         else -> null
       }
 
   override fun getReactModuleInfoProvider(): ReactModuleInfoProvider = ReactModuleInfoProvider {
     mapOf(
-        DevourEnvironmentModule.NAME to
-            ReactModuleInfo(
-                name = DevourEnvironmentModule.NAME,
-                className = DevourEnvironmentModule::class.java.name,
-                canOverrideExistingModule = false,
-                needsEagerInit = false,
-                isCxxModule = false,
-                isTurboModule = false,
-            ),
+        info(DevourEnvironmentModule.NAME, DevourEnvironmentModule::class.java),
+        info(DevourStorageModule.NAME, DevourStorageModule::class.java),
+        info(DevourSecretsModule.NAME, DevourSecretsModule::class.java),
     )
   }
+
+  private fun info(
+      name: String,
+      type: Class<out NativeModule>,
+  ): Pair<String, ReactModuleInfo> =
+      name to
+          ReactModuleInfo(
+              name = name,
+              className = type.name,
+              canOverrideExistingModule = false,
+              needsEagerInit = false,
+              isCxxModule = false,
+              isTurboModule = false,
+          )
 }
