@@ -1,7 +1,9 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 
-import {palette, space, typography} from '../design/tokens';
+import {useTheme} from '../design/ThemeProvider';
+import type {Theme} from '../design/theme';
+import {space, typography} from '../design/tokens';
 
 type Props = {
   index: string;
@@ -13,6 +15,9 @@ type Props = {
  * A numbered marker is allowed here because the roadmap is a real sequence.
  */
 export function PhaseMark({index, name}: Props) {
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   return (
     <View style={styles.block}>
       <Text accessibilityLabel={`Phase ${index}`} style={styles.index}>
@@ -23,17 +28,19 @@ export function PhaseMark({index, name}: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  block: {
-    marginTop: space.xxl,
-  },
-  index: {
-    ...typography.display,
-    color: palette.molten,
-  },
-  name: {
-    ...typography.title,
-    color: palette.bone,
-    marginTop: space.xs,
-  },
-});
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    block: {
+      marginTop: space.xxl,
+    },
+    index: {
+      ...typography.display,
+      color: theme.palette.accent,
+    },
+    name: {
+      ...typography.title,
+      color: theme.palette.text,
+      marginTop: space.xs,
+    },
+  });
+}

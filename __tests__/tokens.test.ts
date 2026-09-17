@@ -1,16 +1,12 @@
-import {motion, palette, space, typography} from '../src/design/tokens';
-
-const HEX = /^#[0-9A-F]{6}$/;
+import * as tokens from '../src/design/tokens';
 
 describe('design tokens', () => {
-  it('declares every colour as a six digit uppercase hex value', () => {
-    Object.values(palette).forEach(value => {
-      expect(value).toMatch(HEX);
-    });
+  it('keeps colour out: colour belongs to the theme', () => {
+    expect(Object.keys(tokens)).not.toContain('palette');
   });
 
   it('keeps the spacing scale ascending and on the four pixel base', () => {
-    const values = Object.values(space);
+    const values = Object.values(tokens.space);
 
     values.forEach(value => {
       expect(value % 4).toBe(0);
@@ -23,10 +19,10 @@ describe('design tokens', () => {
 
   it('keeps the type scale strictly descending', () => {
     const sizes = [
-      typography.display.fontSize,
-      typography.title.fontSize,
-      typography.body.fontSize,
-      typography.label.fontSize,
+      tokens.typography.display.fontSize,
+      tokens.typography.title.fontSize,
+      tokens.typography.body.fontSize,
+      tokens.typography.label.fontSize,
     ];
 
     sizes.slice(1).forEach((size, index) => {
@@ -35,14 +31,18 @@ describe('design tokens', () => {
   });
 
   it('reserves monospace for machine data only', () => {
-    expect(typography.mono.fontFamily).toBe('monospace');
-    expect(typography.body).not.toHaveProperty('fontFamily');
+    expect(tokens.typography.mono.fontFamily).toBe('monospace');
+    expect(tokens.typography.body).not.toHaveProperty('fontFamily');
   });
 
   it('keeps motion durations short enough for a phone', () => {
-    Object.values(motion).forEach(duration => {
+    Object.values(tokens.motion).forEach(duration => {
       expect(duration).toBeGreaterThan(0);
       expect(duration).toBeLessThanOrEqual(400);
     });
+  });
+
+  it('holds the touch target at the accessibility floor', () => {
+    expect(tokens.TOUCH_TARGET).toBeGreaterThanOrEqual(44);
   });
 });
