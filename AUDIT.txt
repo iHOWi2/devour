@@ -1,0 +1,307 @@
+================================================================================
+DEVOUR - HANDOFF AUDIT
+Plain-text briefing for whoever works on this project next (human or agent).
+Last updated: 2026-09-17, after Phase 1.1 (runnable APK, themes, localisation).
+================================================================================
+
+Read this file first, then docs/MAP.md (where every file lives), then
+docs/ARCHITECTURE.md (layer contracts and the decisions log), then
+docs/ROADMAP.md (phase order and exit criteria).
+
+
+--------------------------------------------------------------------------------
+1. WHAT THE PROJECT IS
+--------------------------------------------------------------------------------
+
+Devour is a mobile-first AI coding workspace for Android. A coding agent lives on the
+phone, next to a real project directory, and can actually work: read and edit files,
+run shell commands through a local runtime (Termux), use Git, load skills, call MCP
+servers, and show the user what changed before anything is accepted.
+
+It is NOT:
+  - a chat app with syntax highlighting
+  - a desktop IDE shrunk onto a phone screen
+  - a Claude or ChatGPT clone
+  - Material CRUD screens, endless cards, random gradients, generic AI-slop UI
+  - mock integrations that look like features
+
+The product model, top to bottom:
+
+  User
+    -> Devour Mobile UI            React Native + TypeScript
+    -> Agent Runtime               model, context, planning, permissions
+    -> Tools | Skills | MCP | Connectors
+    -> Native Android Layer        Kotlin: filesystem, processes, PTY, permissions
+    -> Local Runtime               Termux today, replaceable behind an interface
+    -> Real workspace on the device
+
+The target interaction, which every UI decision should serve:
+
+  User:  "Add Firebase authentication"
+  Agent: inspects the project (list_files, search_files, read_file)
+         proposes a plan
+  User:  approves
+  Agent: edits files, runs commands, runs tests
+         "Tests passed. 4 files changed."  [View changes] [Undo]
+
+
+--------------------------------------------------------------------------------
+2. WHAT THE USER WANTS (and how they want it built)
+--------------------------------------------------------------------------------
+
+Stated requirements, in the user's own words (Russian), with the working translation:
+
+  "2 языка, англ и ру (по умолчанию устройство)"
+      Two languages: English and Russian. The device setting is the default.
+      DONE in Phase 1.1.
+
+  "темы белая и темная"
+      Light and dark themes. DONE in Phase 1.1 (device setting is the default).
+
+  "ui там по скиллам так же делаешь чо там надо"
+      Build the UI according to the studied design skill, not by improvisation.
+
+  "на будущее анимации плавные особые, переходы и т.п современная фигня,
+   скиллы для этого и т п есть в интернете"
+      Later: smooth, deliberate animations and transitions, modern feel. Research
+      existing motion skills instead of guessing. NOT STARTED - see section 8.
+
+  "Советую сделать MAP проэкта чтобы не теряться по проекту"
+      A project map so nobody hunts for files. DONE: docs/MAP.md.
+
+  "Не создавай fake implementations"
+      No stubs dressed as features. A small working system beats a large fake one.
+
+  "НЕ ДЕЛАЙ ВЕСЬ ПРОЕКТ ЗА ОДИН ПРОХОД"
+      Do not build everything in one pass. One phase at a time, verified, committed,
+      documented. Do not rewrite the project from scratch.
+
+  "Не говори, что CI работает, пока реально не проверишь workflow"
+      Do not claim CI works until a real run proves it. This applies to every claim:
+      say what is verified, and say plainly what is not.
+
+The user works on the phone, mostly by describing intent to an agent. They read Russian
+and English. They install APK artefacts from CI by hand and report back with
+screenshots - that feedback loop is the only hardware verification this project has.
+
+
+--------------------------------------------------------------------------------
+3. HARD RULES OF ENGAGEMENT
+--------------------------------------------------------------------------------
+
+  1. One phase at a time. A phase ends only when its exit criteria hold, CI is green,
+     and the documentation says what happened. See docs/ROADMAP.md.
+  2. Every iteration: inspect -> implement -> build -> test -> fix -> commit -> document.
+  3. The gate, every time: npm run lint, npm run typecheck, npm test, plus an APK build
+     whenever Android code changed.
+  4. Fix architectural problems before moving to the next phase, not after.
+  5. No fake implementations, no dead UI. A composer box that cannot send a message is
+     a lie about what the build does; that is why Phase 1 has no chat input.
+  6. Nothing dangerous happens silently: shell commands, destructive operations,
+     network access and external tools get asked for, every time.
+  7. Skills describe HOW to work. Tools describe WHAT can be done. MCP brings external
+     tool providers. Connectors bring external services. Keep the four separate.
+  8. The model provider and the execution runtime sit behind interfaces. Neither may be
+     welded into the UI.
+  9. Kotlin does Android; React Native does UI. No business logic in Kotlin, no Android
+     APIs in JS outside src/native.
+ 10. Never claim a build runs on a device unless someone ran it on a device.
+
+
+--------------------------------------------------------------------------------
+4. CURRENT STATE - what is real, what is not
+--------------------------------------------------------------------------------
+
+Real, in code, verified by CI and (where stated) on hardware:
+
+  - React Native 0.87.1 + TypeScript app shell, new architecture, Hermes
+  - Kotlin native layer with one real native module, DevourEnvironment: device facts,
+    storage, files dir, and detection of an installed Termux runtime host
+  - dark + light themes; colour lives in two semantic palettes, components ask for
+    roles (surface, danger, onAccent) and never for hex values
+  - English + Russian; language resolved from the device locale via I18nManager
+    constants; typed dictionaries make a missing translation a typecheck error;
+    real Russian plural rules (1 ядро / 2 ядра / 5 ядер)
+  - Phase 1 screen: real device facts, failure state with retry, collapsed settings
+    panel with theme and language segmented controls
+  - Jest tests: tokens, themes, i18n, formatters, native wrapper, screen behaviour
+  - GitHub Actions: js job (lint, typecheck, tests) and android job (assembleDebug,
+    a check that the APK actually contains assets/index.android.bundle, artefact upload)
+  - the debug APK carries its own JS bundle, so it runs with no development server
+
+Verified on hardware 2026-09-17 (user screenshot, TECNO KJ6, Android 13 / API 33,
+arm64-v8a, 8 cores, Termux 0.119.0-beta.3 installed): the APK installs, launches,
+renders real device facts, picks Russian from the device locale, picks the dark theme,
+and reports the native bridge connected.
+
+Specified in docs/ but NOT implemented - do not pretend otherwise:
+
+  - agent runtime, model provider, streaming, conversation state (Phase 2)
+  - workspace, project selection, filesystem browsing (Phase 3)
+  - shell execution, PTY, Termux integration (Phase 4)
+  - tools, permission prompts, diffs, undo (Phases 5, 9)
+  - skill discovery and loading (Phase 6)
+  - MCP subsystem (Phase 7)
+  - connectors (Phase 8)
+  - animations and transitions beyond the motion tokens (Phases 9-10)
+
+Known limitation shipped on purpose: the theme and language choice lives for the
+session only. There is no settings store before Phase 3, and a fake one would be a lie.
+
+
+--------------------------------------------------------------------------------
+5. TOOLCHAIN AND VERSIONS (pinned, 2026-09)
+--------------------------------------------------------------------------------
+
+  Node                >= 22.11 (.nvmrc)
+  JDK                 21 in CI
+  React               19.2.3
+  React Native        0.87.1
+  Android compileSdk  37, targetSdk 36, minSdk 24, buildTools 37.0.0
+  NDK                 27.1.12297006
+  Kotlin              2.2.0
+  Gradle              9.4.1 (wrapper JAR is NOT committed, see section 7)
+  Jest                29, preset @react-native/jest-preset
+  TypeScript          6.x, strict
+  Prettier            2.8.8 - a formatter here, not an ESLint rule
+
+Android flags in android/gradle.properties: newArchEnabled=true, hermesEnabled=true,
+edgeToEdgeEnabled=true, android.builtInKotlin=false, android.newDsl=false.
+The last two are deprecation-warning territory and must be revisited before AGP 10.
+
+
+--------------------------------------------------------------------------------
+6. SKILLS AND REFERENCES TO STUDY BEFORE WRITING CODE
+--------------------------------------------------------------------------------
+
+The user's instruction is explicit: study the skills, do not guess. These were read
+during Phase 0 and shaped docs/DESIGN.md and docs/SKILL-SYSTEM.md.
+
+Frontend / UI:
+  - Anthropic frontend-design skill (the primary UI reference):
+    github.com/anthropics/claude-plugins-official
+      plugins/frontend-design/skills/frontend-design/SKILL.md
+    Covers visual direction, typography, colour, composition, hierarchy, spacing,
+    animation, visual detail, and how to avoid generic AI output. Do not copy
+    Anthropic's own visual identity; apply the principles.
+  - React Native docs: reactnative.dev - new architecture, StyleSheet, Pressable,
+    Appearance/useColorScheme, I18nManager, accessibility props.
+
+Skill authoring (for Devour's own skill system in Phase 6):
+  - plugins/plugin-dev/skills/skill-development/SKILL.md - how a skill is structured,
+    when to split into references, progressive disclosure.
+  - plugins/example-plugin/skills/example-skill/SKILL.md - a minimal practical layout.
+
+Motion (for the animation work the user asked to plan ahead - researched 2026-09-17):
+  - LottieFiles motion-design-skill: github.com/lottiefiles/motion-design-skill
+    Universal motion principles for agents: timing, easing, choreography.
+  - react-native-reanimated 4.6.0 (released 2026-08-21) supports React Native
+    0.83-0.87 and requires the new architecture, which Devour already uses. Pairs with
+    Worklets 0.12.x. Compatibility table:
+    docs.swmansion.com/react-native-reanimated/docs/guides/compatibility
+    Reanimated 4 brings CSS-style animations and transitions plus layout transitions.
+  - Shared element transitions exist but are still flagged experimental by both
+    Reanimated and React Navigation. Treat as opt-in, not as a foundation.
+  - NOT installed yet, on purpose: no dependency lands before the phase that uses it.
+
+Backend-side / runtime work (Phases 4-8), study before touching:
+  - Termux: termux.dev docs, RUN_COMMAND intent, termux-am, and the permission model.
+    Devour already declares <queries> for com.termux in the manifest.
+  - Model Context Protocol: modelcontextprotocol.io - servers, tools, transports,
+    lifecycle. Devour needs several servers to work without special-casing any.
+  - Android process and PTY handling, scoped storage and SAF for project directories.
+
+
+--------------------------------------------------------------------------------
+7. ENVIRONMENT CONSTRAINTS THAT SHAPED THIS REPOSITORY
+--------------------------------------------------------------------------------
+
+The agent that built Phases 0-1.1 worked from a sandbox with NO network and NO Android
+device. Consequences a newcomer will otherwise find baffling:
+
+  - Nothing was ever run locally: no npm install, no lint, no tests, no Gradle build.
+    CI is the only verification path, so CI is deliberately strict.
+  - No lockfile is committed, because it could not be generated. CI runs
+    `npm install --no-audit --no-fund`, not `npm ci`, and actions/setup-node caching is
+    disabled (it fails without a lockfile). Commit package-lock.json when you can and
+    switch CI to npm ci.
+  - Binary files cannot be committed through the tooling used, so gradle-wrapper.jar and
+    gradlew are absent. Run `bash scripts/bootstrap-gradle-wrapper.sh` once, locally and
+    in CI, to generate the wrapper. Commit the real wrapper when you can.
+  - The workflow posts its own failure logs as a pull request comment, because the
+    tooling had no access to Actions logs. Keep that: it is genuinely useful.
+  - Debug builds are signed with the AGP-managed debug keystore; no keystore is in the
+    repository. Release signing reads DEVOUR_RELEASE_* environment variables and the
+    DEVOUR_RELEASE_KEYSTORE_BASE64 secret.
+
+
+--------------------------------------------------------------------------------
+8. DEFECTS ALREADY HIT (do not reintroduce)
+--------------------------------------------------------------------------------
+
+Every one of these was found by CI or by a real install, never by reading the code.
+
+  1. ESLint config referenced prettier/prettier, but @react-native/eslint-config 0.87
+     no longer ships eslint-plugin-prettier. Prettier is a formatter here.
+  2. AGP 9 rejects getDefaultProguardFile('proguard-android.txt') because it carries
+     -dontoptimize. Use proguard-android-optimize.txt.
+  3. MainActivity.kt used fabricEnabled without importing it from
+     DefaultNewArchitectureEntryPoint.
+  4. The app theme referenced @drawable/rn_edit_text_material, which lives in app
+     resources, not in the React Native AAR. The drawable is now in res/drawable.
+  5. THE BIG ONE: the debug APK shipped with no JS bundle, so it installed and then died
+     on "Unable to load script ... index.android.bundle". The React Native Gradle plugin
+     registers the bundling task only for variants that are NOT listed in
+     debuggableVariants, and that list defaults to ['debug', 'debugOptimized'].
+     Fix: react { debuggableVariants = [] } in android/app/build.gradle, plus a CI step
+     that greps the packaged APK and fails when the bundle is missing. A running Metro
+     still takes priority, so fast refresh is unaffected. Do not "clean this up".
+  6. The theme layer reused React Native's ColorSchemeName ('light' | 'dark') while
+     useColorScheme() returns ColorSchemeName | null. The theme layer now declares its
+     own DeviceColorScheme and accepts null/undefined.
+  7. The device row printed the brand twice ("TECNO TECNO KJ6"): Android reports
+     manufacturer and model separately and many vendors put the brand in the model.
+     formatDeviceName in src/lib/format.ts prepends the brand only when the model does
+     not already start with it.
+
+Expected, harmless CI noise: `platforms;android-37` is not a package id on the GitHub
+runner (it ships android-37.0/37.1/37.2); AGP resolves compileSdk 37 itself. AGP also
+warns about android.builtInKotlin and android.newDsl being deprecated, and about the
+obsolete applicationVariants API.
+
+
+--------------------------------------------------------------------------------
+9. DEFERRED WORK (tracked, not pretended away)
+--------------------------------------------------------------------------------
+
+  - persist the theme and language choice (needs the settings store from Phase 3)
+  - commit package-lock.json and switch CI to npm ci
+  - commit the real Gradle wrapper (gradlew, gradle-wrapper.jar)
+  - migrate DevourEnvironment to a codegen TurboModule spec (Phase 4)
+  - multi-architecture debug builds in CI (currently arm64-v8a only, for speed)
+  - enforce Prettier as a CI error once a lockfile pins the toolchain
+  - release.yml is unverified: it runs only on a v* tag and no tag exists yet
+  - replace the deprecated DefaultReactActivityDelegate flags constructor
+  - revisit android.newDsl=false and android.builtInKotlin=false before AGP 10
+  - motion layer: pick and validate Reanimated 4.6 in the phase that needs it
+
+
+--------------------------------------------------------------------------------
+10. WHAT HAPPENS NEXT
+--------------------------------------------------------------------------------
+
+Phase 2 - Chat. Streaming responses, a ModelProvider abstraction, conversation state,
+markdown and code-block rendering, error and retry states. Exit criteria: a conversation
+survives rotation and process death; swapping the provider needs no UI change; streaming
+can be cancelled.
+
+Then Phase 3 (workspace), Phase 4 (runtime and Termux), Phase 5 (tools),
+Phase 6 (skills), Phase 7 (MCP), Phase 8 (connectors), Phase 9 (agent UX: tool cards,
+permission sheets, diffs, undo), Phase 10 (motion, accessibility, performance - where
+the animation work the user asked for lands), Phase 11 (signed release).
+
+When you finish an iteration, update: README.md (current status), docs/ROADMAP.md (what
+was verified and what defects were closed), docs/MAP.md (any new file), and this file if
+the rules or the landmines changed.
+
+================================================================================
