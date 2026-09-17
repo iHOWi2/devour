@@ -1,7 +1,9 @@
 import {NativeModules} from 'react-native';
 
 import {
+  API_KEY_SECRET,
   CONVERSATION_DOCUMENT,
+  PROVIDER_DOCUMENT,
   createApiKeyStore,
   createConversationStore,
   createProviderSettingsStore,
@@ -248,5 +250,34 @@ describe('native storage bridges', () => {
     };
 
     await expect(readSecret('provider.apiKey')).resolves.toBeNull();
+  });
+});
+
+/**
+ * The Kotlin modules validate the name before they touch the filesystem or the keystore, and
+ * a name they refuse is a feature that silently cannot save anything. This regression guard
+ * exists because `provider.apiKey` was refused on a real phone: the first pattern allowed
+ * lowercase letters only, so saving the API key failed with "is not a secret name" while the
+ * endpoint settings next to it saved fine.
+ *
+ * Keep this in step with NAME_PATTERN in DevourStorageModule.kt and KEY_PATTERN in
+ * DevourSecretsModule.kt.
+ */
+const NATIVE_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+
+describe('the names the native layer is asked to accept', () => {
+  it.each([
+    ['conversation document', CONVERSATION_DOCUMENT],
+    ['provider document', PROVIDER_DOCUMENT],
+    ['api key secret', API_KEY_SECRET],
+  ])('%s is a name Kotlin will take', (_label, name) => {
+    expect(name).toMatch(NATIVE_NAME_PATTERN);
+  });
+
+  it('is a pattern that refuses a path, not just an odd character', () => {
+    expect('../conversation.json').not.toMatch(NATIVE_NAME_PATTERN);
+    expect('nested/conversation.json').not.toMatch(NATIVE_NAME_PATTERN);
+    expect('.hidden').not.toMatch(NATIVE_NAME_PATTERN);
+    expect('').not.toMatch(NATIVE_NAME_PATTERN);
   });
 });

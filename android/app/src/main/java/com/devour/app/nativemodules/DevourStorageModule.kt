@@ -86,12 +86,13 @@ class DevourStorageModule(private val reactAppContext: ReactApplicationContext) 
 
   /**
    * Documents live in one directory and are named, not addressed: a name that is not a plain
-   * lowercase file name is refused, so nothing outside that directory can be reached.
+   * file name is refused, so nothing outside that directory can be reached. Path separators,
+   * a leading dot and anything else that could escape the directory are not names.
    */
   private fun resolve(name: String): File {
     if (!NAME_PATTERN.matches(name)) {
       throw IllegalArgumentException(
-          "\"$name\" is not a document name: lowercase letters, digits, dot, dash, underscore")
+          "\"$name\" is not a document name: letters, digits, dot, dash or underscore")
     }
 
     return File(File(reactAppContext.filesDir, DIRECTORY), name)
@@ -120,6 +121,6 @@ class DevourStorageModule(private val reactAppContext: ReactApplicationContext) 
     private const val DIRECTORY: String = "documents"
     private const val ERROR_NAME: String = "devour_storage_invalid_name"
     private const val ERROR_IO: String = "devour_storage_io_failed"
-    private val NAME_PATTERN: Regex = Regex("^[a-z0-9][a-z0-9._-]{0,63}$")
+    private val NAME_PATTERN: Regex = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
   }
 }
