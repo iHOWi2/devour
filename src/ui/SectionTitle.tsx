@@ -10,7 +10,10 @@ type Props = {
   hint?: string;
 };
 
-/** A hairline and a quiet label: structure without a card. */
+/**
+ * A section is separated by space and weight, not by a rule and not by a card. Sentence
+ * case, because tracked-out capitals are decoration that also costs legibility.
+ */
 export function SectionTitle({title, hint}: Props) {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -26,19 +29,17 @@ export function SectionTitle({title, hint}: Props) {
 function createStyles(theme: Theme) {
   return StyleSheet.create({
     block: {
-      marginTop: space.xl,
-      paddingTop: space.md,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: theme.palette.edge,
+      marginTop: space.xxl,
     },
     title: {
-      ...typography.label,
+      ...typography.title,
       color: theme.palette.text,
     },
     hint: {
-      ...typography.body,
+      ...typography.caption,
       color: theme.palette.muted,
       marginTop: space.xs,
+      maxWidth: 440,
     },
   });
 }

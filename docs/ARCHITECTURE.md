@@ -194,13 +194,14 @@ whether a runtime host exists is a real, checkable fact rather than a placeholde
 
 ## Native layer (implemented incrementally)
 
-Kotlin owns Android reality. Today it exposes three modules:
+Kotlin owns Android reality. Today it exposes four modules:
 
 | Module                    | Name on the bridge  | Responsibility                                                                         |
 | ------------------------- | ------------------- | -------------------------------------------------------------------------------------- |
 | `DevourEnvironmentModule` | `DevourEnvironment` | device, SDK, ABI, CPU and storage facts; runtime host detection via package visibility |
 | `DevourStorageModule`     | `DevourStorage`     | named JSON documents in `filesDir/documents`, written to a temporary file and renamed  |
 | `DevourSecretsModule`     | `DevourSecrets`     | AES/GCM values under a non-extractable AndroidKeyStore key, kept in private prefs      |
+| `DevourClipboardModule`   | `DevourClipboard`   | copies text through `ClipboardManager` on the UI thread                                |
 
 Modules are registered through `DevourNativePackage`, a `BaseReactPackage` with lazy module
 instantiation, which is the current React Native API for native modules on the new
@@ -213,7 +214,7 @@ single place that reads it, and a module missing from the running binary produce
 JavaScript-only build degrade honestly - the chat still runs, and says "history is not being
 saved" instead of pretending to persist.
 
-Document names and secret keys are validated (`^[a-z0-9][a-z0-9._-]{0,63}$`) so a caller
+Document names and secret keys are validated (`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`) so a caller
 cannot address anything outside the one directory. Writes are atomic by rename, so a process
 killed mid-write leaves the previous document readable rather than a truncated one. A secret
 blob that no longer decrypts - the keystore key was replaced with the lock screen, or the
@@ -231,7 +232,7 @@ App
     LanguageProvider   device locale -> Language -> Translator (src/i18n)
       ThemeProvider    device scheme -> ThemeName -> Theme     (src/design)
         AgentProvider  one AgentSession for the process        (src/agent)
-          RootScreen   ChatScreen | SystemScreen
+          RootScreen   ChatScreen | SettingsScreen
 ```
 
 | Concern  | Owner                           | Resolution order                                    |
@@ -286,22 +287,26 @@ only its presence is exposed to the interface.
 
 ## Decisions
 
-| #   | Decision                                              | Reason                                                                                                                                                                                                                   |
-| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | React Native + TypeScript for UI, Kotlin for platform | native performance and real Android APIs without a WebView                                                                                                                                                               |
-| 2   | New architecture and Hermes enabled                   | current React Native default; avoids a later migration                                                                                                                                                                   |
-| 3   | `BaseReactPackage` instead of `createNativeModules`   | `createNativeModules` is deprecated in React Native 0.87                                                                                                                                                                 |
-| 4   | Gradle wrapper JAR not committed                      | binary artefacts stay out of the repository; `scripts/bootstrap-gradle-wrapper.sh` and CI provision Gradle 9.4.1                                                                                                         |
-| 5   | No committed debug keystore                           | debug builds use the Android Gradle Plugin's managed keystore                                                                                                                                                            |
-| 6   | Release signing from environment variables            | no secrets in the repository; unsigned APK when no keystore is provided                                                                                                                                                  |
-| 7   | No dependency added without a working use             | keeps the foundation small and the build fast                                                                                                                                                                            |
-| 8   | `debuggableVariants = []` in the app's `react` block  | the plugin skips JS bundling for debuggable variants, so the debug APK shipped without `assets/index.android.bundle` and died at launch with "Unable to load script"; CI now fails if the bundle is missing from the APK |
-| 9   | Semantic palettes per theme, no hex in components     | a second theme costs nothing, and a component cannot accidentally become theme specific                                                                                                                                  |
-| 10  | Own i18n layer instead of a library                   | two languages need a typed dictionary and one plural rule; `Intl.PluralRules` is not guaranteed in Hermes, and a library would add weight without adding correctness                                                     |
-| 11  | Prettier is a formatter, not an ESLint rule           | `@react-native/eslint-config` 0.87 ships no `eslint-plugin-prettier`, so a `prettier/prettier` rule fails the run; `npm run format:check` is a separate CI step instead                                                  |
-| 12  | Streaming over `XMLHttpRequest`, not `fetch`          | React Native's `fetch` resolves only when the body is complete and exposes no reader, so a streamed answer would arrive in one lump; XHR's `readyState === LOADING` plus `responseText` is the only streaming path in RN |
-| 13  | Own document store in Kotlin, not `AsyncStorage`      | Kotlin already owns the filesystem, the conversation is one document rather than a key-value map, and an atomic rename is something a dependency could not give us                                                       |
-| 14  | Secrets in the AndroidKeyStore, not in a document     | an API key in `filesDir` is readable by anything that reads the backup or the device; the keystore key is non-extractable, so the stored blob is useless when copied off the phone                                       |
-| 15  | No navigation library for two screens                 | a router, a gesture handler and a stack are weight for a switch between two surfaces; `RootScreen` holds the choice and Phase 3 revisits it when the workspace screen arrives                                            |
-| 16  | `react-native-safe-area-context` added in Phase 2     | the chat reaches the top and bottom edges, and edge-to-edge is enabled; `useSafeAreaInsets` is the supported way to read the real insets, and the library ships the jest mock the tests use                              |
-| 17  | The system prompt states the build has no tools       | the model is told exactly what it can do, so it stops promising to read files it cannot reach; the prompt grows in the phase that gives it a capability                                                                  |
+| #   | Decision                                              | Reason                                                                                                                                                                                                                             |
+| --- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | React Native + TypeScript for UI, Kotlin for platform | native performance and real Android APIs without a WebView                                                                                                                                                                         |
+| 2   | New architecture and Hermes enabled                   | current React Native default; avoids a later migration                                                                                                                                                                             |
+| 3   | `BaseReactPackage` instead of `createNativeModules`   | `createNativeModules` is deprecated in React Native 0.87                                                                                                                                                                           |
+| 4   | Gradle wrapper JAR not committed                      | binary artefacts stay out of the repository; `scripts/bootstrap-gradle-wrapper.sh` and CI provision Gradle 9.4.1                                                                                                                   |
+| 5   | No committed debug keystore                           | debug builds use the Android Gradle Plugin's managed keystore                                                                                                                                                                      |
+| 6   | Release signing from environment variables            | no secrets in the repository; unsigned APK when no keystore is provided                                                                                                                                                            |
+| 7   | No dependency added without a working use             | keeps the foundation small and the build fast                                                                                                                                                                                      |
+| 8   | `debuggableVariants = []` in the app's `react` block  | the plugin skips JS bundling for debuggable variants, so the debug APK shipped without `assets/index.android.bundle` and died at launch with "Unable to load script"; CI now fails if the bundle is missing from the APK           |
+| 9   | Semantic palettes per theme, no hex in components     | a second theme costs nothing, and a component cannot accidentally become theme specific                                                                                                                                            |
+| 10  | Own i18n layer instead of a library                   | two languages need a typed dictionary and one plural rule; `Intl.PluralRules` is not guaranteed in Hermes, and a library would add weight without adding correctness                                                               |
+| 11  | Prettier is a formatter, not an ESLint rule           | `@react-native/eslint-config` 0.87 ships no `eslint-plugin-prettier`, so a `prettier/prettier` rule fails the run; `npm run format:check` is a separate CI step instead                                                            |
+| 12  | Streaming over `XMLHttpRequest`, not `fetch`          | React Native's `fetch` resolves only when the body is complete and exposes no reader, so a streamed answer would arrive in one lump; XHR's `readyState === LOADING` plus `responseText` is the only streaming path in RN           |
+| 13  | Own document store in Kotlin, not `AsyncStorage`      | Kotlin already owns the filesystem, the conversation is one document rather than a key-value map, and an atomic rename is something a dependency could not give us                                                                 |
+| 14  | Secrets in the AndroidKeyStore, not in a document     | an API key in `filesDir` is readable by anything that reads the backup or the device; the keystore key is non-extractable, so the stored blob is useless when copied off the phone                                                 |
+| 15  | No navigation library for two screens                 | a router, a gesture handler and a stack are weight for a switch between two surfaces; `RootScreen` holds the choice and Phase 3 revisits it when the workspace screen arrives                                                      |
+| 16  | `react-native-safe-area-context` added in Phase 2     | the chat reaches the top and bottom edges, and edge-to-edge is enabled; `useSafeAreaInsets` is the supported way to read the real insets, and the library ships the jest mock the tests use                                        |
+| 17  | The system prompt states the build has no tools       | the model is told exactly what it can do, so it stops promising to read files it cannot reach; the prompt grows in the phase that gives it a capability                                                                            |
+| 18  | Monochrome palette, no hue anywhere                   | contrast, weight and position carry the hierarchy instead, and it survives both themes, sunlight and colour blindness; the warm cream and terracotta it replaced is the most common signature of a generated interface             |
+| 19  | `Animated` with the native driver, not Reanimated     | transform and opacity already run off the JavaScript thread, and nothing in this phase needs a gesture or a shared element transition; Reanimated arrives in the phase that does (Phases 9-10) instead of being carried until then |
+| 20  | Clipboard as a Kotlin module, not a dependency        | `ClipboardManager` is a few lines of Kotlin, the bridge already exists, and a build without the module hides the action instead of shipping a button that silently fails                                                           |
+| 21  | Tests run `Animated` with animations disabled         | the native driver attaches to a host view a test renderer does not have; React Native's own switch resolves every animation to its final value, which keeps test-only branches out of the components                               |

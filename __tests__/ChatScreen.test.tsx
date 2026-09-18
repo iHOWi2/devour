@@ -1,4 +1,5 @@
 import React from 'react';
+import {NativeModules} from 'react-native';
 import type {ReactTestInstance, ReactTestRenderer} from 'react-test-renderer';
 import {act, create} from 'react-test-renderer';
 
@@ -17,6 +18,7 @@ import type {
 import {ThemeProvider} from '../src/design/ThemeProvider';
 import {LanguageProvider} from '../src/i18n';
 import type {Language} from '../src/i18n';
+import {CLIPBOARD_MODULE_NAME} from '../src/native';
 import {ChatScreen} from '../src/screens/ChatScreen';
 
 const settings: ProviderSettings = {
@@ -147,7 +149,7 @@ type Options = {
 
 async function renderChat(options: Options = {}) {
   const {control, provider} = controllable();
-  const openSystem = jest.fn();
+  const openSettings = jest.fn();
   let renderer: ReactTestRenderer | undefined;
 
   await act(async () => {
@@ -174,7 +176,7 @@ async function renderChat(options: Options = {}) {
                 ),
               save: () => Promise.resolve(),
             }}>
-            <ChatScreen onOpenSystem={openSystem} />
+            <ChatScreen onOpenSettings={openSettings} />
           </AgentProvider>
         </ThemeProvider>
       </LanguageProvider>,
@@ -187,7 +189,7 @@ async function renderChat(options: Options = {}) {
 
   await settle();
 
-  return {control, openSystem, renderer};
+  return {control, openSettings, renderer};
 }
 
 function output(renderer: ReactTestRenderer): string {
@@ -230,22 +232,66 @@ async function press(
   });
 }
 
+/** Reports the scroll position the way a real ScrollView does, in pixels. */
+async function scrollTo(
+  renderer: ReactTestRenderer,
+  position: {offset: number; content: number; viewport: number},
+): Promise<void> {
+  const scrollable = renderer.root.findAll(
+    node => typeof node.props.onScroll === 'function',
+  )[0];
+
+  await act(async () => {
+    scrollable?.props.onScroll({
+      nativeEvent: {
+        contentOffset: {x: 0, y: position.offset},
+        contentSize: {height: position.content, width: 360},
+        layoutMeasurement: {height: position.viewport, width: 360},
+      },
+    });
+    await flush();
+  });
+}
+
+/**
+ * Whether the jump-to-newest pill can be touched at all. The pill stays mounted so it can
+ * fade out, so "hidden" is the state of the holder rather than the absence of a node - and
+ * the holder is the one thing in this screen that sets `pointerEvents`.
+ */
+function pillReachable(renderer: ReactTestRenderer): boolean {
+  const holders = renderer.root.findAll(
+    node => node.props.pointerEvents !== undefined,
+  );
+
+  expect(holders.length).toBeGreaterThan(0);
+
+  return holders.every(node => node.props.pointerEvents === 'auto');
+}
+
+const modules = NativeModules as Record<string, unknown>;
+
+afterEach(() => {
+  delete modules[CLIPBOARD_MODULE_NAME];
+});
+
 describe('chat screen', () => {
   it('says the model is missing instead of pretending to be a chat', async () => {
-    const {renderer, openSystem} = await renderChat({settings: null});
+    const {renderer, openSettings} = await renderChat({settings: null});
 
-    expect(output(renderer)).toContain('No model is configured');
+    const rendered = output(renderer);
+    expect(rendered).toContain('Point it at a model.');
+    expect(rendered).toContain('Devour needs an endpoint and a model name');
 
     await press(renderer, 'chat-configure');
 
-    expect(openSystem).toHaveBeenCalled();
+    expect(openSettings).toHaveBeenCalled();
   });
 
   it('states what the build can do once an endpoint is configured', async () => {
     const {renderer} = await renderChat();
 
     const rendered = output(renderer);
-    expect(rendered).toContain('Ask the model anything');
+    expect(rendered).toContain('Ask anything.');
     expect(rendered).toContain('it cannot read your files or run commands');
   });
 
@@ -323,7 +369,7 @@ describe('chat screen', () => {
   });
 
   it('offers the configuration screen when the failure is a missing endpoint', async () => {
-    const {openSystem, renderer} = await renderChat({settings: null});
+    const {openSettings, renderer} = await renderChat({settings: null});
 
     await type(renderer, 'composer-input', 'hello');
     await press(renderer, 'composer-send');
@@ -331,7 +377,7 @@ describe('chat screen', () => {
     expect(output(renderer)).toContain('No model provider is configured');
 
     await press(renderer, 'failure-configure');
-    expect(openSystem).toHaveBeenCalled();
+    expect(openSettings).toHaveBeenCalled();
   });
 
   it('restores the stored conversation after process death', async () => {
@@ -381,12 +427,100 @@ describe('chat screen', () => {
 
     const rendered = output(renderer);
     expect(rendered).not.toContain('first question');
-    expect(rendered).toContain('Ask the model anything');
+    expect(rendered).toContain('Ask anything.');
   });
 
   it('warns when the conversation is not being saved', async () => {
     const {renderer} = await renderChat({brokenStore: true});
 
     expect(output(renderer)).toContain('history is not being saved');
+  });
+
+  it('answers again, in place, when asked for another attempt', async () => {
+    const {control, renderer} = await renderChat();
+
+    await type(renderer, 'composer-input', 'name three');
+    await press(renderer, 'composer-send');
+    await act(async () => {
+      control.push('First answer.');
+      control.finish();
+      await flush();
+    });
+
+    await press(renderer, 'chat-regenerate');
+    await act(async () => {
+      control.push('Different answer.');
+      control.finish();
+      await flush();
+    });
+
+    const rendered = output(renderer);
+    expect(rendered).toContain('Different answer.');
+    expect(rendered).not.toContain('First answer.');
+    // The question is asked once and stays once.
+    expect(rendered.split('name three').length - 1).toBe(1);
+  });
+
+  it('copies an answer through the native clipboard, and says so afterwards', async () => {
+    const setString = jest.fn(() => Promise.resolve(true));
+    modules[CLIPBOARD_MODULE_NAME] = {setString};
+
+    const {control, renderer} = await renderChat();
+
+    await type(renderer, 'composer-input', 'give me the command');
+    await press(renderer, 'composer-send');
+    await act(async () => {
+      control.push('Run `npm test`.');
+      control.finish();
+      await flush();
+    });
+
+    expect(output(renderer)).not.toContain('Copied');
+
+    await press(renderer, 'copy-turn');
+
+    expect(setString).toHaveBeenCalledWith('Run `npm test`.');
+    expect(output(renderer)).toContain('Copied');
+
+    // The label returns to rest on a timer; unmounting cancels it, which is also the
+    // proof that the component cleans up after itself.
+    await act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('offers no copying at all when the build has no clipboard module', async () => {
+    const {control, renderer} = await renderChat();
+
+    await type(renderer, 'composer-input', 'anything');
+    await press(renderer, 'composer-send');
+    await act(async () => {
+      control.push('An answer.');
+      control.finish();
+      await flush();
+    });
+
+    // A button that silently does nothing is worse than no button.
+    expect(output(renderer)).not.toContain('copy-turn');
+  });
+
+  it('follows the stream only while the reader is at the bottom', async () => {
+    const {control, renderer} = await renderChat();
+
+    await type(renderer, 'composer-input', 'long answer please');
+    await press(renderer, 'composer-send');
+    await act(async () => {
+      control.push('A very long answer.');
+      control.finish();
+      await flush();
+    });
+
+    expect(pillReachable(renderer)).toBe(false);
+
+    await scrollTo(renderer, {offset: 0, content: 2400, viewport: 600});
+    expect(pillReachable(renderer)).toBe(true);
+
+    await press(renderer, 'chat-newest');
+    expect(pillReachable(renderer)).toBe(false);
   });
 });

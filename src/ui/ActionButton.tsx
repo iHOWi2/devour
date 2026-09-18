@@ -1,11 +1,17 @@
 import React, {useMemo} from 'react';
-import {Pressable, StyleSheet, Text} from 'react-native';
+import {Animated, Pressable, StyleSheet, Text} from 'react-native';
 
+import {usePressScale} from '../design/motion';
 import {useTheme} from '../design/ThemeProvider';
 import type {Theme} from '../design/theme';
 import {TOUCH_TARGET, radius, space, typography} from '../design/tokens';
 
-export type ButtonTone = 'accent' | 'quiet';
+/**
+ * `primary` is the one loud control on a screen: a filled block at maximum contrast.
+ * `quiet` is outlined, `plain` is text only. There is no fourth tone, because a screen with
+ * four kinds of button has no hierarchy.
+ */
+export type ButtonTone = 'primary' | 'quiet' | 'plain';
 
 type Props = {
   label: string;
@@ -16,43 +22,39 @@ type Props = {
   testID?: string;
 };
 
-/**
- * The one action a screen wants the user to take is `accent`; everything else is `quiet`.
- * Spending the accent on more than one control per screen is what makes it stop meaning
- * anything, so there is no third tone.
- */
 export function ActionButton({
   label,
   onPress,
-  tone = 'accent',
+  tone = 'primary',
   disabled = false,
   accessibilityLabel,
   testID,
 }: Props) {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const press = usePressScale();
 
   return (
-    <Pressable
-      accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityRole="button"
-      accessibilityState={{disabled}}
-      disabled={disabled}
-      onPress={onPress}
-      style={[
-        styles.button,
-        tone === 'accent' ? styles.accent : styles.quiet,
-        disabled && styles.disabled,
-      ]}
-      testID={testID}>
-      <Text
-        style={[
-          styles.label,
-          tone === 'accent' ? styles.accentLabel : styles.quietLabel,
-        ]}>
-        {label}
-      </Text>
-    </Pressable>
+    <Animated.View style={disabled ? undefined : press.style}>
+      <Pressable
+        accessibilityLabel={accessibilityLabel ?? label}
+        accessibilityRole="button"
+        accessibilityState={{disabled}}
+        disabled={disabled}
+        onPress={onPress}
+        onPressIn={press.onPressIn}
+        onPressOut={press.onPressOut}
+        style={[styles.button, styles[tone], disabled && styles.disabled]}
+        testID={testID}>
+        <Text
+          style={[
+            styles.label,
+            tone === 'primary' ? styles.primaryLabel : styles.quietLabel,
+          ]}>
+          {label}
+        </Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -63,23 +65,27 @@ function createStyles(theme: Theme) {
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: space.lg,
-      borderRadius: radius.row,
+      borderRadius: radius.control,
     },
-    accent: {
-      backgroundColor: theme.palette.accent,
+    primary: {
+      backgroundColor: theme.palette.inverse,
     },
     quiet: {
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.palette.edge,
+      backgroundColor: theme.palette.surface,
+    },
+    plain: {
+      paddingHorizontal: space.sm,
     },
     disabled: {
-      opacity: 0.4,
+      opacity: 0.35,
     },
     label: {
       ...typography.label,
     },
-    accentLabel: {
-      color: theme.palette.onAccent,
+    primaryLabel: {
+      color: theme.palette.onInverse,
     },
     quietLabel: {
       color: theme.palette.text,

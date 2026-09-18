@@ -21,11 +21,11 @@ devour/
 |-- app.json                        app name for the CLI and the registered component
 |-- package.json                    dependencies, npm scripts, engines
 |-- package-lock.json               the pinned dependency tree; CI installs with `npm ci`
-|-- tsconfig.json                   extends @react-native/typescript-config, strict
+|-- tsconfig.json                   extends @react-native/typescript-config, strict, node types
 |-- babel.config.js                 @react-native/babel-preset
 |-- metro.config.js                 default Metro config
 |-- jest.config.js                  preset: @react-native/jest-preset, setupFiles
-|-- jest.setup.js                   the safe-area mock; a test renderer has no native views
+|-- jest.setup.js                   safe-area and animation mocks: a test renderer has no views
 |-- .eslintrc.js                    @react-native/eslint-config (no prettier plugin: decision 11)
 |-- .prettierrc.js                  formatting rules for `npm run format`
 |-- .nvmrc / .watchmanconfig        Node version pin, Watchman config
@@ -71,7 +71,8 @@ devour/
 |   |       `-- openaiCompatible.ts the first provider: /chat/completions with stream: true
 |   |-- design/
 |   |   |-- tokens.ts               space, radius, typography, motion, TOUCH_TARGET (no colour)
-|   |   |-- theme.ts                dark and light palettes, DeviceColorScheme, resolveTheme
+|   |   |-- theme.ts                monochrome dark and light palettes, resolveTheme
+|   |   |-- motion.ts               entrance, press, pulse, appear, surface crossfade hooks
 |   |   `-- ThemeProvider.tsx       theme context, follows the device unless overridden
 |   |-- i18n/
 |   |   |-- index.ts                public surface: useI18n, types, re-exports
@@ -89,29 +90,34 @@ devour/
 |   |   |-- environment.ts          typed wrapper over the DevourEnvironment native module
 |   |   |-- documents.ts            typed wrapper over DevourStorage (JSON documents)
 |   |   |-- secrets.ts              typed wrapper over DevourSecrets (keystore-backed values)
+|   |   |-- clipboard.ts            typed wrapper over DevourClipboard (copy one string)
 |   |   `-- index.ts                public surface of the native layer
 |   |-- screens/
-|   |   |-- RootScreen.tsx          the chat <-> system switch; no navigation library
-|   |   |-- ChatScreen.tsx          Phase 2 surface: turns, streaming, failure, composer
-|   |   |-- SystemScreen.tsx        endpoint form, device facts, theme and language controls
+|   |   |-- RootScreen.tsx          the chat <-> settings crossfade; no navigation library
+|   |   |-- ChatScreen.tsx          the conversation: turns, caret, autoscroll, composer
+|   |   |-- SettingsScreen.tsx      model, interface, data and device sections
 |   |   `-- ProviderForm.tsx        the endpoint form itself: validation and its messages
 |   `-- ui/
-|       |-- ActionButton.tsx        primary and quiet button, 44 px target
-|       |-- ChatTurn.tsx            one conversation turn: role marker and its body
-|       |-- Composer.tsx            multiline input with Send, and Stop while streaming
-|       |-- DataRow.tsx             label + value row with an optional state dot
-|       |-- Markdown.tsx            renders the parsed markdown blocks
-|       |-- PhaseMark.tsx           the large phase number and its name
-|       |-- ScreenHeader.tsx        the wordmark and the screen's actions
-|       |-- SectionTitle.tsx        small caps section label
-|       |-- SegmentedControl.tsx    generic segmented choice, 44 px targets
-|       |-- SettingsPanel.tsx       theme and language segmented controls
-|       |-- StateLine.tsx           one line of state: dot, text, detail, optional action
-|       `-- TextField.tsx           labelled text input with an error line
+|       |-- ActionButton.tsx        primary, quiet and plain button with press feedback
+|       |-- Caret.tsx               the pulsing block cursor that says an answer is arriving
+|       |-- ChatTurn.tsx            one turn: raised block or full-width answer, its actions
+|       |-- Composer.tsx            rounded field with one round control: send, or stop
+|       |-- CopyAction.tsx          copies, then says so - only once the clipboard took it
+|       |-- DataRow.tsx             label + monospaced value, no state dot
+|       |-- EmptyState.tsx          the one large statement, staggered in
+|       |-- Markdown.tsx            renders the parsed markdown blocks, code with a copy
+|       |-- RoundAction.tsx         the 44 px circle in the composer: send or stop
+|       |-- ScreenHeader.tsx        title, what the screen points at, its text actions
+|       |-- ScrollPill.tsx          jump back to the newest turn, fades when there is none
+|       |-- SectionTitle.tsx        a section title and its one-sentence hint
+|       |-- SegmentedControl.tsx    segmented choice with a sliding inverted selection
+|       |-- SettingRow.tsx          a pressable settings row: label, description, value
+|       |-- StateLine.tsx           one line of state: inverted for a failure, outlined for a limit
+|       `-- TextField.tsx           labelled monospaced input, outline for focus and refusal
 |
 |-- __tests__/
 |   |-- tokens.test.ts              tokens carry no colour; scales stay ordered
-|   |-- theme.test.ts               palette parity, device scheme fallbacks, status bar
+|   |-- theme.test.ts               greys only, measured contrast, device scheme fallbacks
 |   |-- i18n.test.ts                dictionary completeness, locale parsing, plural forms
 |   |-- format.test.ts              formatBytes and formatDeviceName edge cases
 |   |-- markdown.test.ts            parser: fences, open fences mid-stream, inline code
@@ -119,11 +125,11 @@ devour/
 |   |-- nativeStores.test.ts        document and secret wrappers: typed failure, null reads
 |   |-- conversation.test.ts        the reducer: deltas, completion, cancellation, failure
 |   |-- sse.test.ts                 decoder: split chunks, comments, [DONE], multiline data
-|   |-- provider.test.ts            request shape, headers, chunk mapping, error mapping
+|   |-- provider.test.ts            request shape, headers, chunk mapping, presets
 |   |-- storage.test.ts             document parsers reject junk; the turn cap holds
 |   |-- session.test.ts             send, stream, cancel, retry, hydrate, persistence state
-|   |-- ChatScreen.test.tsx         sends, streams, stops, retries, configures, resets
-|   |-- SystemScreen.test.tsx       device facts, retry, endpoint form, theme and language
+|   |-- ChatScreen.test.tsx         sends, streams, stops, retries, copies, regenerates
+|   |-- SettingsScreen.test.tsx     device facts, presets, endpoint form, data, appearance
 |   `-- App.test.tsx                the real composition root degrades honestly with no bridge
 |
 `-- android/
@@ -141,7 +147,10 @@ devour/
             |   |-- MainActivity.kt         ReactActivity, component name 'devour'
             |   `-- nativemodules/
             |       |-- DevourEnvironmentModule.kt  device, storage and runtime-host facts
-            |       `-- DevourNativePackage.kt      registers the module (getModule provider)
+            |       |-- DevourStorageModule.kt      JSON documents, atomic write by rename
+            |       |-- DevourSecretsModule.kt      AES/GCM values under a keystore key
+            |       |-- DevourClipboardModule.kt    copies one string via ClipboardManager
+            |       `-- DevourNativePackage.kt      registers the modules (getModule provider)
             `-- res/
                 |-- values/{strings,colors,styles}.xml
                 |-- drawable/{rn_edit_text_material,ic_launcher_background,ic_launcher_foreground}.xml
@@ -157,6 +166,7 @@ devour/
 | add a language                 | `src/i18n/language.ts`, `messages.ts`, `plural.ts`, then the language control        |
 | change a colour                | `src/design/theme.ts` - both palettes. Never a hex in a component                    |
 | change spacing, type or motion | `src/design/tokens.ts`                                                               |
+| animate something              | a hook in `src/design/motion.ts`; a component never writes its own curve             |
 | build a reusable control       | `src/ui/`, styled from `useTheme()` and tokens                                       |
 | build a screen                 | `src/screens/`, composed from `src/ui/`                                              |
 | add a pure helper              | `src/lib/`, with a test next to it in `__tests__/`                                   |

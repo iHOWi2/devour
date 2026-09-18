@@ -5,6 +5,11 @@ export {
   resolveNativeModule,
 } from './bridge';
 export {
+  CLIPBOARD_MODULE_NAME,
+  copyToClipboard,
+  isClipboardAvailable,
+} from './clipboard';
+export {
   STORAGE_MODULE_NAME,
   deleteDocument,
   isDocumentStoreAvailable,

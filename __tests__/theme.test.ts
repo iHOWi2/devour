@@ -6,7 +6,38 @@ import {
   themes,
 } from '../src/design/theme';
 
+import type {Palette} from '../src/design/theme';
+
 const HEX = /^#[0-9A-F]{6}$/;
+
+/** WCAG 2.1 relative luminance, from the hex values the components actually receive. */
+function luminance(hex: string): number {
+  const channels = [1, 3, 5].map(
+    at => parseInt(hex.slice(at, at + 2), 16) / 255,
+  );
+
+  const [r, g, b] = channels.map(channel =>
+    channel <= 0.03928
+      ? channel / 12.92
+      : Math.pow((channel + 0.055) / 1.055, 2.4),
+  ) as [number, number, number];
+
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrast(foreground: string, background: string): number {
+  const light = Math.max(luminance(foreground), luminance(background));
+  const dark = Math.min(luminance(foreground), luminance(background));
+
+  return (light + 0.05) / (dark + 0.05);
+}
+
+const TEXT_ROLES: ReadonlyArray<keyof Palette> = ['text', 'muted', 'faint'];
+const SURFACE_ROLES: ReadonlyArray<keyof Palette> = [
+  'background',
+  'surface',
+  'surfaceStrong',
+];
 
 describe('themes', () => {
   it('declares every colour as a six digit uppercase hex value', () => {
@@ -23,10 +54,43 @@ describe('themes', () => {
     );
   });
 
-  it('is not one theme with its lightness inverted', () => {
-    expect(themes.light.palette.background).not.toBe(themes.dark.palette.text);
-    expect(themes.light.palette.text).not.toBe(themes.dark.palette.background);
-    expect(themes.light.palette.accent).not.toBe(themes.dark.palette.accent);
+  it('carries no hue at all: every colour is a grey', () => {
+    Object.values(themes).forEach(theme => {
+      Object.values(theme.palette).forEach(value => {
+        const [red, green, blue] = [1, 3, 5].map(at => value.slice(at, at + 2));
+
+        expect(green).toBe(red);
+        expect(blue).toBe(red);
+      });
+    });
+  });
+
+  /**
+   * A monochrome interface has nowhere to hide: if a grey is too close to the surface under
+   * it, the text is simply unreadable. Every text role is therefore measured against every
+   * surface it can sit on, at the WCAG floor for body text.
+   */
+  it('keeps every text role readable on every surface', () => {
+    Object.values(themes).forEach(theme => {
+      TEXT_ROLES.forEach(role => {
+        SURFACE_ROLES.forEach(surface => {
+          expect(
+            contrast(theme.palette[role], theme.palette[surface]),
+          ).toBeGreaterThanOrEqual(4.5);
+        });
+      });
+    });
+  });
+
+  it('keeps primary text and the inverted fill at maximum contrast', () => {
+    Object.values(themes).forEach(theme => {
+      expect(
+        contrast(theme.palette.text, theme.palette.background),
+      ).toBeGreaterThan(15);
+      expect(
+        contrast(theme.palette.onInverse, theme.palette.inverse),
+      ).toBeGreaterThan(15);
+    });
   });
 
   it('follows the device only when the user asked for it', () => {

@@ -19,9 +19,29 @@ principles that shaped [DESIGN.md](DESIGN.md) are:
 - a quality floor is part of the design: focus states, reduced motion, contrast, honest empty
   and error states
 
-Applied to Devour: the subject matter is a machine working on your code, so the direction is
-an instrument chassis with warm text, one molten accent, monospace reserved for machine truth,
-and the roadmap phase number as the single bold element on the Phase 1 screen.
+Applied to Devour, after the direction was re-read against this list in Phase 2.1: the
+subject matter is a machine working on your code, so the interface is monochrome - black,
+white and the greys between them - with maximum-contrast inversion as the only accent,
+monospace reserved for machine truth, and the one large type size spent on the empty chat.
+The first direction failed its own source: a warm cream background with a terracotta accent
+is the first named pattern on the list above, and the decorative phase number on the opening
+screen was a numbered marker with no sequence behind it. Both are gone.
+
+## Motion (studied for Phase 2.1, applied in it)
+
+Source: the motion-design skill listed below. The principles that shaped the motion layer in
+[DESIGN.md](DESIGN.md) and `src/design/motion.ts`:
+
+- one motion personality per product; ours is firm and quick, with no bounce and no overshoot
+- entrances decelerate and are longer than exits; an exit accelerates, because what is leaving
+  should not ask to be watched
+- durations belong to a small named palette, and the standard transition on a touch surface is
+  over before the next tap is expected
+- motion is never the only carrier of information: the still state has to say the same thing
+- a stagger exists to lead the eye, so the whole cascade ends inside half a second
+- ambient looping motion is reserved for "the machine is working", and is the first thing to
+  drop when the device asks for less motion
+- a slide implies a spatial relationship; siblings that do not have one should crossfade
 
 ## Skill architecture
 

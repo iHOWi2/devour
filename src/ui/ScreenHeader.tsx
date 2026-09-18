@@ -1,9 +1,10 @@
 import React, {useMemo} from 'react';
-import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 
 import {useTheme} from '../design/ThemeProvider';
 import type {Theme} from '../design/theme';
-import {TOUCH_TARGET, space, typography} from '../design/tokens';
+import {space, typography} from '../design/tokens';
+import {ActionButton} from './ActionButton';
 
 export type HeaderAction = {
   label: string;
@@ -12,36 +13,42 @@ export type HeaderAction = {
 };
 
 type Props = {
-  version?: string;
+  title: string;
+  /** What this screen is pointed at right now: the model in use, a version. */
+  subtitle?: string | null;
   actions?: ReadonlyArray<HeaderAction>;
 };
 
 /**
- * The wordmark, an optional version, and the way out of this screen.
+ * Where you are, what it is pointed at, and the way out.
  *
- * Header actions are quiet on purpose: the accent belongs to what the agent is doing and to
- * the one action the screen is asking for, which on the chat screen is Send.
+ * Header actions are text only on purpose. The one filled control on a screen belongs to
+ * the thing the screen is for - sending a message, saving the endpoint - and a header full
+ * of buttons competes with it.
  */
-export function ScreenHeader({version, actions = []}: Props) {
+export function ScreenHeader({title, subtitle, actions = []}: Props) {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <View style={styles.header}>
-      <Text style={styles.wordmark}>devour</Text>
-      <View style={styles.right}>
-        {version === undefined ? null : (
-          <Text style={styles.version}>{version}</Text>
+      <View style={styles.titles}>
+        <Text style={styles.title}>{title}</Text>
+        {subtitle === undefined || subtitle === null ? null : (
+          <Text numberOfLines={1} style={styles.subtitle}>
+            {subtitle}
+          </Text>
         )}
+      </View>
+      <View style={styles.actions}>
         {actions.map(action => (
-          <Pressable
-            accessibilityRole="button"
+          <ActionButton
             key={action.label}
+            label={action.label}
             onPress={action.onPress}
-            style={styles.action}
-            testID={action.testID}>
-            <Text style={styles.actionLabel}>{action.label}</Text>
-          </Pressable>
+            testID={action.testID}
+            tone="plain"
+          />
         ))}
       </View>
     </View>
@@ -54,28 +61,26 @@ function createStyles(theme: Theme) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: space.lg,
+      paddingLeft: space.lg,
+      paddingRight: space.xs,
+      paddingBottom: space.sm,
     },
-    wordmark: {
+    titles: {
+      flex: 1,
+      paddingRight: space.sm,
+    },
+    title: {
       ...typography.title,
       color: theme.palette.text,
     },
-    right: {
+    subtitle: {
+      ...typography.caption,
+      color: theme.palette.muted,
+      marginTop: 2,
+    },
+    actions: {
       flexDirection: 'row',
       alignItems: 'center',
-    },
-    version: {
-      ...typography.mono,
-      color: theme.palette.muted,
-    },
-    action: {
-      justifyContent: 'center',
-      minHeight: TOUCH_TARGET,
-      paddingLeft: space.md,
-    },
-    actionLabel: {
-      ...typography.label,
-      color: theme.palette.text,
     },
   });
 }

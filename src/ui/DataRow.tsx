@@ -2,49 +2,31 @@ import React, {useMemo} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 
 import {useTheme} from '../design/ThemeProvider';
-import type {Palette, Theme} from '../design/theme';
+import type {Theme} from '../design/theme';
 import {space, typography} from '../design/tokens';
-
-export type RowState = 'neutral' | 'ok' | 'warn' | 'danger';
 
 type Props = {
   label: string;
   value: string;
-  state?: RowState;
 };
 
-function stateColour(palette: Palette, state: RowState): string {
-  switch (state) {
-    case 'ok':
-      return palette.ok;
-    case 'warn':
-      return palette.warn;
-    case 'danger':
-      return palette.danger;
-    default:
-      return 'transparent';
-  }
-}
-
-/** One line of machine data: a quiet label, a monospaced value, an optional state dot. */
-export function DataRow({label, value, state = 'neutral'}: Props) {
+/**
+ * One machine fact: a quiet label and a monospaced value.
+ *
+ * There is no state dot. A coloured dot would have to mean something, and what it would
+ * mean is already written in the value - "not installed" is clearer than amber, and it
+ * survives a monochrome interface, sunlight and colour blindness.
+ */
+export function DataRow({label, value}: Props) {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.valueColumn}>
-        {state === 'neutral' ? null : (
-          <View
-            style={[
-              styles.dot,
-              {backgroundColor: stateColour(theme.palette, state)},
-            ]}
-          />
-        )}
-        <Text style={styles.value}>{value}</Text>
-      </View>
+      <Text selectable style={styles.value}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -54,26 +36,15 @@ function createStyles(theme: Theme) {
     row: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      paddingVertical: space.sm,
+      paddingVertical: space.md,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: theme.palette.edge,
     },
     label: {
-      ...typography.label,
+      ...typography.caption,
       color: theme.palette.muted,
-      width: 104,
-      paddingTop: 2,
-    },
-    valueColumn: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    dot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      marginRight: space.sm,
+      width: 96,
+      paddingTop: 3,
     },
     value: {
       ...typography.mono,
