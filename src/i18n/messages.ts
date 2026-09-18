@@ -35,6 +35,8 @@ export const MESSAGE_KEYS = [
   'chat.regenerate',
   'chat.newest',
   'chat.noModel',
+  'code.unnamed',
+  'code.fold',
   'error.provider.unconfigured',
   'error.provider.unauthorized',
   'error.provider.http',
@@ -96,7 +98,7 @@ export const MESSAGE_KEYS = [
 
 export type MessageKey = (typeof MESSAGE_KEYS)[number];
 
-export const PLURAL_KEYS = ['cpu.cores'] as const;
+export const PLURAL_KEYS = ['cpu.cores', 'code.lines'] as const;
 
 export type PluralKey = (typeof PLURAL_KEYS)[number];
 
@@ -134,6 +136,8 @@ const en: Dictionary = {
     'chat.regenerate': 'Again',
     'chat.newest': 'Jump to the newest turn',
     'chat.noModel': 'no model configured',
+    'code.unnamed': 'code',
+    'code.fold': 'Show less',
     'error.provider.unconfigured': 'No model provider is configured',
     'error.provider.unauthorized': 'The endpoint rejected the API key',
     'error.provider.http': 'The endpoint returned an error',
@@ -199,6 +203,10 @@ const en: Dictionary = {
       one: '{count} core',
       other: '{count} cores',
     },
+    'code.lines': {
+      one: 'Show {count} line',
+      other: 'Show all {count} lines',
+    },
   },
 };
 
@@ -229,6 +237,8 @@ const ru: Dictionary = {
     'chat.regenerate': 'Ещё раз',
     'chat.newest': 'К последнему ответу',
     'chat.noModel': 'модель не настроена',
+    'code.unnamed': 'код',
+    'code.fold': 'Свернуть',
     'error.provider.unconfigured': 'Провайдер модели не настроен',
     'error.provider.unauthorized': 'Эндпоинт отклонил API-ключ',
     'error.provider.http': 'Эндпоинт вернул ошибку',
@@ -294,6 +304,11 @@ const ru: Dictionary = {
       one: '{count} ядро',
       few: '{count} ядра',
       many: '{count} ядер',
+    },
+    'code.lines': {
+      one: 'Показать {count} строку',
+      few: 'Показать все {count} строки',
+      many: 'Показать все {count} строк',
     },
   },
 };

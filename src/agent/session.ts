@@ -138,7 +138,7 @@ export class AgentSession {
    *
    * The difference from `retry` is the whole point: this drops a finished turn, because the
    * user read it and wants another one. The dropped text is gone - keeping both would make
-   * this a branching conversation, which is a Phase 2.2 feature and not a side effect.
+   * this a branching conversation, which is a Phase 2.3 feature and not a side effect.
    */
   async regenerate(): Promise<void> {
     await this.answerAgain(true);

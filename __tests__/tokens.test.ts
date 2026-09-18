@@ -65,6 +65,16 @@ describe('design tokens', () => {
   });
 
   /**
+   * Ambient motion is the one thing the user did not start, so it must never move at the
+   * speed of something they did: a loop that keeps pace with a press reads as impatience.
+   */
+  it('keeps every loop slower than the slowest transition', () => {
+    Object.values(tokens.motion.loop).forEach(cycle => {
+      expect(cycle).toBeGreaterThan(tokens.motion.duration.slow * 2);
+    });
+  });
+
+  /**
    * An entrance decelerates and an exit accelerates: the control points say which is which,
    * because the second handle is what the end of the curve follows.
    */
@@ -81,6 +91,28 @@ describe('design tokens', () => {
     expect(tokens.motion.easing.exit[1]).toBe(0);
   });
 
+  /**
+   * The curve most things use has to spend its second half settling, or the movement reads
+   * as a cut: its first handle leaves immediately and its second sits at the end value.
+   */
+  it('declares a glide curve that decelerates all the way into place', () => {
+    const [, y1, , y2] = tokens.motion.easing.glide;
+
+    expect(y1).toBe(1);
+    expect(y2).toBe(1);
+  });
+
+  it('scales a press down and an appearance up, both by a little', () => {
+    Object.values(tokens.motion.scale).forEach(scale => {
+      expect(scale).toBeLessThan(1);
+      expect(scale).toBeGreaterThanOrEqual(0.9);
+    });
+
+    expect(tokens.motion.scale.press).toBeGreaterThan(
+      tokens.motion.scale.appear,
+    );
+  });
+
   it('keeps travel distances short enough to read as one movement', () => {
     Object.values(tokens.motion.distance).forEach(distance => {
       expect(distance).toBeGreaterThan(0);
@@ -90,5 +122,14 @@ describe('design tokens', () => {
 
   it('holds the touch target at the accessibility floor', () => {
     expect(tokens.TOUCH_TARGET).toBeGreaterThanOrEqual(44);
+  });
+
+  /**
+   * The cap exists so a large system font cannot break a listing or push a screen's first
+   * paragraph out of view. It must still leave room for the setting to do something.
+   */
+  it('caps the device font scale without pinning it', () => {
+    expect(tokens.MAX_FONT_SCALE).toBeGreaterThan(1);
+    expect(tokens.MAX_FONT_SCALE).toBeLessThanOrEqual(1.5);
   });
 });

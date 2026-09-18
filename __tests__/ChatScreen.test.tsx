@@ -302,7 +302,11 @@ describe('chat screen', () => {
     await press(renderer, 'composer-send');
 
     expect(output(renderer)).toContain('how do I run the tests?');
-    expect(output(renderer)).toContain('answering');
+
+    // Before the first token the turn is three placeholder bars, not a status line: the
+    // answer is announced where it will appear.
+    expect(output(renderer)).toContain('chat-ghost');
+    expect(output(renderer)).toContain('waiting for the model');
 
     await act(async () => {
       control.push('Run ');
@@ -312,6 +316,10 @@ describe('chat screen', () => {
 
     expect(output(renderer)).toContain('npm test');
     expect(output(renderer)).toContain('bash');
+
+    // The bars are gone the moment there is real text, and the caret takes over.
+    expect(output(renderer)).not.toContain('chat-ghost');
+    expect(output(renderer)).toContain('answering');
 
     await act(async () => {
       control.finish();

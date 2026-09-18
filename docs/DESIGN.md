@@ -32,21 +32,31 @@ from that; it is a harder constraint, and the constraint is the point.
 Colour is declared as semantic roles, once per theme, in `src/design/theme.ts`. A component
 asks for a role and never for a hex value; that is what makes a second theme free.
 
-| Token           | Dark      | Light     | Role                                               |
-| --------------- | --------- | --------- | -------------------------------------------------- |
-| `background`    | `#000000` | `#FFFFFF` | the page itself                                    |
-| `surface`       | `#141414` | `#F2F2F2` | a raised block: your own words, a listing, a field |
-| `surfaceStrong` | `#1F1F1F` | `#E6E6E6` | a raised block that is pressed or selected         |
-| `edge`          | `#2E2E2E` | `#D6D6D6` | hairlines and outlines                             |
-| `text`          | `#FFFFFF` | `#000000` | primary text                                       |
-| `muted`         | `#A8A8A8` | `#4A4A4A` | labels, values, anything supporting                |
-| `faint`         | `#8A8A8A` | `#666666` | placeholders and disabled states, still readable   |
-| `inverse`       | `#FFFFFF` | `#000000` | the maximum contrast fill                          |
-| `onInverse`     | `#000000` | `#FFFFFF` | text and glyphs sitting on `inverse`               |
+| Token           | Dark      | Light     | Role                                             |
+| --------------- | --------- | --------- | ------------------------------------------------ |
+| `background`    | `#141414` | `#FAFAFA` | the page itself                                  |
+| `surface`       | `#1F1F1F` | `#F0F0F0` | a raised block: a listing, a field               |
+| `surfaceStrong` | `#2B2B2B` | `#E4E4E4` | your own words, and a block that is pressed      |
+| `edge`          | `#3A3A3A` | `#D4D4D4` | hairlines and outlines                           |
+| `text`          | `#E8E8E8` | `#1A1A1A` | primary text                                     |
+| `muted`         | `#ABABAB` | `#4F4F4F` | labels, values, anything supporting              |
+| `faint`         | `#949494` | `#626262` | placeholders and disabled states, still readable |
+| `inverse`       | `#E8E8E8` | `#1A1A1A` | the maximum contrast fill                        |
+| `onInverse`     | `#141414` | `#FAFAFA` | text and glyphs sitting on `inverse`             |
+
+**Neither extreme is used.** The first monochrome pass was `#FFFFFF` on `#000000`, which is
+21:1 - the most a screen can do. On a phone that is not the best case, it is glare: white
+letters bleed into true black on an OLED panel, and the author's verdict after reading one
+long answer on hardware was that it tears your eyes. The page is now `#141414`, primary text
+is `#E8E8E8`, and the pair lands at about 15:1 - still far past the 7:1 that the strictest
+accessibility level asks for, and readable for an hour. The light theme is off its extremes
+for the same reason: a backlight behind `#FFFFFF` is a lamp pointed at the reader.
 
 Rules: every value is a grey, enforced by a test that reads the hex channels; every text role
 clears 4.5:1 against `background`, `surface` and `surfaceStrong`, computed from the WCAG
-formula in `__tests__/theme.test.ts` rather than asserted by eye; both themes carry every
+formula in `__tests__/theme.test.ts` rather than asserted by eye; primary text stays inside a
+measured window - past 12:1, short of 19:1 - so neither the glare nor a washed-out grey can
+come back; `#000000` and `#FFFFFF` appear nowhere, also by test; both themes carry every
 token, so a component cannot be theme specific; no component contains a hex value.
 
 The theme follows the device by default. `system`, `dark` and `light` are the three choices,
@@ -71,6 +81,13 @@ legibility, and they appear nowhere.
 Rules: one `display` element per screen at most; prose is never mono; machine data is never
 sans; body text never drops below 16, because this is a phone.
 
+The device's own font scale is obeyed for prose without a ceiling - someone who set their
+phone to the largest text wants the largest text, and a paragraph reflows. `mono` and
+`display` are capped at `MAX_FONT_SCALE` (1.2): code scrolls sideways instead of reflowing,
+so at 1.6x a listing becomes a column of three words, and a 32 dp statement at 1.6x pushes
+the screen it introduces out of view. Found on a real device with a large system font, not in
+a simulator.
+
 ## Space, shape and touch
 
 A four pixel base scale (`space` in `src/design/tokens.ts`): 4, 8, 12, 16, 24, 40, 64.
@@ -84,32 +101,67 @@ everything is a tell; so is a hairline around everything.
 Nothing interactive is smaller than 44 px (`TOUCH_TARGET`), and primary actions sit in the
 lower half of the screen where a thumb reaches.
 
+## Icons
+
+Seven icons, drawn as vectors in `src/ui/Icon.tsx`: `send`, `stop`, `newest`, `copy`,
+`check`, `again`, `next`. Nothing else is drawn as an icon, and an icon with no caller is
+deleted rather than kept for later.
+
+They are geometry, not characters. The first build used `\u2191` for send and `\u203a` for a
+row that opens; on the author's phone the send button rendered as two empty boxes, because
+the font that device ships with has no such glyph. A control whose meaning depends on an
+unknown font is a control that can break on a device nobody tested, so nothing user facing
+may be a text glyph. An icon font is not the answer either: a licensed binary with its own
+metrics, loaded before the first frame, to draw seven shapes.
+
+| Rule           | Value                                                                                         |
+| -------------- | --------------------------------------------------------------------------------------------- |
+| Grid           | 24 units, 2 units of margin                                                                   |
+| Sizes          | 16 inside a caption, 20 in a row or a pill, 24 in a round control                             |
+| Stroke         | 1.75 at 24, 1.9 at 20, 2.1 at 16 - the small sizes are drawn heavier so the weight reads even |
+| Caps and joins | round, everywhere                                                                             |
+| Fill           | none, except `stop`: a stop is a solid, because the thing that was moving ends here           |
+| Colour         | a palette text role (`text`, `muted`, `faint`, `onInverse`), never a hex value                |
+
+An icon is hidden from screen readers; the control it sits in carries the label.
+
 ## Motion
 
-One personality for the whole application: firm and quick, no bounce, no overshoot. Bounce
-belongs to a different product. Everything is `Animated` with the native driver, so transform
-and opacity run off the JavaScript thread; the hooks live in `src/design/motion.ts`.
+One personality for the whole application: quick, and smooth rather than firm - no bounce, no
+overshoot. Bounce belongs to a different product. Everything is `Animated` with the native
+driver, so transform and opacity run off the JavaScript thread; the hooks live in
+`src/design/motion.ts`.
 
-| Token       | Value              | Use                                   |
-| ----------- | ------------------ | ------------------------------------- |
-| `instant`   | 90 ms              | press feedback                        |
-| `quick`     | 150 ms             | a control changing state, an exit     |
-| `standard`  | 240 ms             | something arriving                    |
-| `slow`      | 360 ms             | a whole surface changing              |
-| `signature` | `(0.2, 0, 0, 1)`   | entrances: fast start, gentle landing |
-| `exit`      | `(0.3, 0, 1, 1)`   | exits: accelerate, do not be watched  |
-| `ambient`   | `(0.4, 0, 0.6, 1)` | anything that loops                   |
+| Token       | Value                | Use                                                          |
+| ----------- | -------------------- | ------------------------------------------------------------ |
+| `instant`   | 90 ms                | press feedback                                               |
+| `quick`     | 160 ms               | a control changing state, an icon swap, an exit              |
+| `standard`  | 260 ms               | something arriving                                           |
+| `slow`      | 400 ms               | a whole surface changing                                     |
+| `pulse`     | 1040 ms              | one breath of the caret                                      |
+| `ghost`     | 1400 ms              | one pass of the wave over the placeholder lines              |
+| `glide`     | `(0.22, 1, 0.36, 1)` | most things: leaves at once, spends its second half settling |
+| `signature` | `(0.2, 0, 0, 1)`     | a control answering a press: firmer, same character          |
+| `exit`      | `(0.3, 0, 1, 1)`     | exits: accelerate, do not be watched                         |
+| `ambient`   | `(0.4, 0, 0.6, 1)`   | anything that loops                                          |
 
 Rules:
 
-- One entrance pattern: rise 10 px and fade, decelerating. Everything that arrives uses it.
+- One entrance pattern: rise 14 px and fade on `glide`. Everything that arrives uses it.
+- Smooth is a curve, not a duration. The first pass ran 240 ms on a curve that lands hard,
+  which reads as a jump; the numbers above are the ceiling of what still feels immediate on a
+  phone, and the curve is what does the work.
+- Two scales and no more: a press goes to 0.97, something appearing in place starts at 0.92.
 - Entrances are longer than exits. What leaves should not ask to be watched.
 - Motion is never the only carrier of information: every animation has a still state that
   says the same thing, which is what makes "reduce motion" a branch rather than a redesign.
 - A stagger is 70 ms and the whole cascade ends inside 500 ms.
-- Nothing loops except the caret that says the machine is working.
+- Two things loop, both of them saying the machine is working: the caret at the end of an
+  arriving answer, and the wave over the placeholder lines before the first token. Every loop
+  is slower than any transition - a loop that keeps pace with a press reads as impatience.
 - `useReducedMotion` follows the Android animator scale; with motion reduced, animations
-  resolve to their final state instead of being skipped.
+  resolve to their final state instead of being skipped, and both loops hold still at a fixed
+  opacity.
 
 ## Language
 
@@ -156,11 +208,14 @@ The conversation is the product surface. What ships today:
 
   and then sync the project.|
 
-    Copy   Again
-                          ( ↓ )
+   [copy] Copy   [again] Again
+                          ( v )
 
-  ( Ask anything...                         ) ( ↑ )
+  ( Describe a task                         ) ( ^ )
 ```
+
+The three round shapes in that sketch are drawn icons, not characters: `send`, `stop` and
+`newest` come out of `src/ui/Icon.tsx`.
 
 - The header says where you are and what it is pointed at: the wordmark, and under it the
   model in use or `no model configured`. Header actions are text, never filled buttons - the
@@ -169,14 +224,28 @@ The conversation is the product surface. What ships today:
   86% wide, with one corner tightened; the agent's answer sits directly on the page at full
   width. No tails, no avatars, no name labels - the shape says who spoke, and prose reads
   better full width.
-- While an answer arrives, a block caret pulses at its end. That is the entire streaming
-  indicator: it is where the eye already is, it needs no row of its own, and it cannot be
-  mistaken for a decorative spinner. The still state is the caret being visible.
+- Between sending and the first token there are three placeholder bars where the lines will
+  be, with a slow wave running down them. A status line saying "waiting for the model" was
+  what shipped first, and it told the reader nothing about where the answer would appear.
+  The bars carry no letters, so they cannot be mistaken for content, and they are replaced by
+  the real text the moment it exists.
+- From the first token on, a block caret pulses at the end of the text. That is the entire
+  streaming indicator: it is where the eye already is, it needs no row of its own, and it
+  cannot be mistaken for a decorative spinner. The still state is the caret being visible.
 - Code is monospace on a raised block, with the language the model named and a copy action in
-  its header. Copying says `Copied` only after the clipboard has actually taken the text, and
-  the action is absent entirely in a build whose native module is missing.
+  its header. Copying says `Copied` only after the clipboard has actually taken the text - and
+  swaps the copy icon for a tick, which is the answer to a press that otherwise changes
+  nothing on screen - and the action is absent entirely in a build whose native module is
+  missing.
+- A finished listing longer than 14 lines is folded, and the button that opens it counts what
+  is hidden: `Show all 37 lines`. A model asked for a file answers with two hundred lines, and
+  unfolded that is three screens of scrolling between one sentence and the next. A listing
+  that is still arriving is never folded: the reader is watching it be written.
+- Fences are trimmed of the blank lines models pad them with. Rendered literally they leave a
+  gap under the block's header that reads as a broken layout; blank lines inside the listing
+  are the author's and stay.
 - Under the last answer: `Copy` and `Again`. `Again` replaces the answer rather than adding a
-  second one - a branching conversation is a Phase 2.2 feature, not a side effect.
+  second one - a branching conversation is a Phase 2.3 feature, not a side effect.
 - A stopped turn keeps the text that arrived and says it was stopped. A truncated answer with
   no explanation looks like a bug.
 - The page follows the stream only while the reader is already at the bottom. Scrolling up to
@@ -187,8 +256,11 @@ The conversation is the product surface. What ships today:
   limitation the user cannot fix now, such as history not being saved, is an outlined strip
   instead.
 - The composer is one rounded field and one round control. The control does not move between
-  states: while a stream runs, the same circle stops it. The field keeps taking text during a
-  stream, because typing the next question while reading is normal.
+  states: while a stream runs, the same circle stops it. It is filled when it has something
+  to do and outlined when it does not, and the icon scales in on either change. The field's
+  outline brightens while it holds the keyboard, because a 2 px caret is otherwise the only
+  sign of which control is focused. The field keeps taking text during a stream, because
+  typing the next question while reading is normal.
 - An empty conversation is not dressed up as a greeting. It is one large statement - `Ask
 anything.` or `Point it at a model.` - one sentence of what this build can and cannot do,
   and, when nothing is configured, the button that fixes it. It sits at the bottom, next to
@@ -277,6 +349,8 @@ Every screen that ships must satisfy all of these:
 - every visible string comes from the dictionary, and both languages render without clipping
 - one-handed: primary actions sit in the lower half; touch targets are at least 44 px
 - no component contains a hex colour, a hard-coded spacing number, or an English string
+- no icon, affordance or state is a text character: a glyph the device's font lacks renders as
+  an empty box, and that has already happened on hardware
 - interactive elements declare `accessibilityRole` and their state, abbreviations such as `RU`
   carry a spoken label, and an element that is invisible is also hidden from a screen reader
 - every animation has a still state that carries the same information, and reduced motion is

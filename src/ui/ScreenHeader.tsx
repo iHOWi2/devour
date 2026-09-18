@@ -47,7 +47,7 @@ export function ScreenHeader({title, subtitle, actions = []}: Props) {
             label={action.label}
             onPress={action.onPress}
             testID={action.testID}
-            tone="plain"
+            tone="ghost"
           />
         ))}
       </View>

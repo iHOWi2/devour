@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React, {useMemo, useState} from 'react';
 import {StyleSheet, TextInput, View} from 'react-native';
 
 import {useTheme} from '../design/ThemeProvider';
@@ -25,6 +25,9 @@ type Props = {
  * so the thing under the thumb is always the thing the user needs. The field keeps taking
  * text during a stream - typing the next question while reading the answer is normal - and
  * sending is what waits.
+ *
+ * The field's outline brightens while it has the keyboard. On a phone the caret is the only
+ * other sign of which control is focused, and it is two pixels wide.
  */
 export function Composer({
   value,
@@ -39,14 +42,17 @@ export function Composer({
 }: Props) {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const [focused, setFocused] = useState(false);
 
   return (
     <View style={styles.composer}>
-      <View style={styles.field}>
+      <View style={[styles.field, focused && styles.focused]}>
         <TextInput
           accessibilityLabel={placeholder}
           multiline
+          onBlur={() => setFocused(false)}
           onChangeText={onChangeText}
+          onFocus={() => setFocused(true)}
           placeholder={placeholder}
           placeholderTextColor={theme.palette.faint}
           style={styles.input}
@@ -56,7 +62,7 @@ export function Composer({
       </View>
       {streaming ? (
         <RoundAction
-          glyph="stop"
+          icon="stop"
           label={stopLabel}
           onPress={onStop}
           testID="composer-stop"
@@ -64,7 +70,7 @@ export function Composer({
       ) : (
         <RoundAction
           disabled={!canSend}
-          glyph="send"
+          icon="send"
           label={sendLabel}
           onPress={onSend}
           testID="composer-send"
@@ -91,6 +97,9 @@ function createStyles(theme: Theme) {
       borderColor: theme.palette.edge,
       justifyContent: 'center',
       minHeight: 44,
+    },
+    focused: {
+      borderColor: theme.palette.muted,
     },
     input: {
       ...typography.body,

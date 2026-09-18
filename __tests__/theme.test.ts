@@ -82,14 +82,31 @@ describe('themes', () => {
     });
   });
 
-  it('keeps primary text and the inverted fill at maximum contrast', () => {
+  /**
+   * Primary text is the loudest thing in the palette, but not as loud as a screen can go.
+   * #FFFFFF on #000000 is 21:1, and on a phone that is what makes a long answer painful to
+   * read - white letters bleed into black on an OLED panel. The window below is "well past
+   * the strictest accessibility level, and short of the glare": it is the assertion that
+   * keeps someone from putting the pure extremes back.
+   */
+  it('keeps primary text loud, and short of the 21:1 glare', () => {
     Object.values(themes).forEach(theme => {
-      expect(
+      [
         contrast(theme.palette.text, theme.palette.background),
-      ).toBeGreaterThan(15);
-      expect(
         contrast(theme.palette.onInverse, theme.palette.inverse),
-      ).toBeGreaterThan(15);
+      ].forEach(ratio => {
+        expect(ratio).toBeGreaterThan(12);
+        expect(ratio).toBeLessThan(19);
+      });
+    });
+  });
+
+  it('uses neither pure black nor pure white anywhere', () => {
+    Object.values(themes).forEach(theme => {
+      Object.values(theme.palette).forEach(value => {
+        expect(value).not.toBe('#000000');
+        expect(value).not.toBe('#FFFFFF');
+      });
     });
   });
 

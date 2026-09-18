@@ -224,7 +224,7 @@ Delivered:
   the worst moment in setting Devour up. No preset is a default: an unconfigured Devour stays
   unconfigured.
 - **`regenerate` in the session**, which drops a finished answer and asks the same question
-  again. Branching conversations are Phase 2.2, so this replaces rather than forks.
+  again. Branching conversations are Phase 2.3, so this replaces rather than forks.
 - 16 new dictionary keys in both languages, and a test that fails on a key the interface no
   longer shows - the dictionary cannot rot quietly. 150 tests in 15 suites.
 
@@ -251,7 +251,65 @@ Defects found while building the phase:
 | the first animated component took the whole suite down: the native driver calls `findNodeHandle`, and a test renderer has no host views, so `getNativeTagFromPublicInstance` is absent | `jest.setup.js` reports animations as disabled, which is React Native's own switch to the implementation that resolves every animation to its final value |
 | a `setTimeout` inside `CopyAction` outlived the test that started it and logged into a torn-down jest environment                                                                      | the copy test unmounts the renderer, which is also the proof that the component clears its own timer                                                      |
 
-## Phase 2.2 - Conversations
+## Phase 2.2 - Interface, second pass (done)
+
+The Phase 2.1 artefact was installed on the author's phone. The verdict: several times
+better, still very raw - SVG icons, smoother animation, ghost states, motion - and the chat
+is too dark, it tears your eyes. The screenshot that came with it showed something worse
+than a matter of taste: the composer's send button was drawing two empty boxes.
+
+Delivered:
+
+- **Icons are geometry** (`src/ui/Icon.tsx`, decision 22). Seven of them - send, stop,
+  newest, copy, check, again, next - drawn on a 24 unit grid through `react-native-svg`,
+  with the stroke weight raised at the small sizes so all three read as one family, and the
+  colour taken from a palette role rather than a hex value. Every text glyph in the interface
+  is gone, and a test asserts that each icon renders as vector nodes and no `Text` at all.
+- **A dark theme that can be read for an hour.** `#FFFFFF` on `#000000` is 21:1, which on an
+  OLED panel is glare rather than contrast. The page is `#141414`, primary text `#E8E8E8`,
+  about 15:1, and the light theme came off its extremes for the same reason. The contrast test
+  now asserts a window - past 12:1, short of 19:1 - and that neither pure black nor pure white
+  appears anywhere, so the glare cannot come back by accident.
+- **Motion that moves instead of jumping.** A `glide` curve `(0.22, 1, 0.36, 1)` that spends
+  its second half settling, durations at the ceiling of what still feels immediate
+  (90 / 160 / 260 / 400), a 14 px rise, two scales (0.97 for a press, 0.92 for something
+  appearing in place), and an icon that scales in when a control swaps what it does.
+- **Ghost lines** (`src/ui/GhostLines.tsx`). Before the first token, three placeholder bars
+  where the lines will be, with one looping value driving a wave down them. It replaced a
+  small grey "waiting for the model", which said nothing about where the answer would appear.
+  They carry no letters, and they hold still at a fixed opacity when the device asks for less
+  motion.
+- **Long listings fold.** A finished block over 14 lines shows a preview and counts what is
+  hidden on the button that opens it - `Show all 37 lines`, in correct Russian plural. A block
+  that is still arriving is never folded. Fences are also trimmed of the blank lines models
+  pad them with, which is what left a gap under the block's header.
+- **A large system font can no longer break a screen.** `MAX_FONT_SCALE` (1.2) caps the
+  device scale for `mono` and `display` only; prose still follows the device without a
+  ceiling, because it reflows and code does not.
+- **Affordances that answer a touch**: a `ghost` button tone that fills when pressed instead
+  of doing nothing, a composer outline that brightens while it holds the keyboard, a send
+  circle that is filled when it has something to send and outlined when it does not, and a
+  copy action whose icon becomes a tick.
+
+**Exit criteria:** nothing user facing is a text character; primary text is loud without
+being 21:1; every new state (waiting, folded, focused, pressed) has a still form; the font
+scale cannot push a screen out of layout.
+
+Defects the hardware screenshot found, all fixed here:
+
+| Defect                                                                                                                                              | Fix                                                                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| the send button rendered `\u2191` as two empty boxes, and the jump-to-newest pill rendered `\u2193` as a comma: the device's font has neither glyph | every icon is now drawn geometry, and no component contains a character used as an icon                                                                    |
+| a blank line after an opening fence became a visible gap under the code block's header                                                              | the parser trims the blank lines at both ends of a fence and keeps the ones inside it                                                                      |
+| one listing filled three screens of scrolling between two sentences                                                                                 | a finished listing over 14 lines is folded, with the hidden line count on the button                                                                       |
+| the device's large system font inflated code and the empty-state statement until both overflowed                                                    | `MAX_FONT_SCALE` caps `mono` and `display`, and prose keeps following the device                                                                           |
+| the retry action on a failure line took the page's text colour on an inverted fill, which in the dark theme is white on white - it was invisible    | a fourth button tone, `contrast`, mirrors `primary` for a control sitting on an inverted fill, and a test asserts no label is drawn in the colour under it |
+
+What this phase does **not** claim: the icons have not been seen on the device whose font
+started this, the softer palette has not been read in sunlight, and no phone has yet folded
+a listing. Only hardware closes those.
+
+## Phase 2.3 - Conversations
 
 One conversation is a demo; a tool people use keeps several. An index document, a title taken
 from the first turn, switching, renaming and deleting, and the branch that `regenerate`

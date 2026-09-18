@@ -51,37 +51,47 @@ export const THEME_PREFERENCES: readonly ThemePreference[] = [
 ];
 
 /**
- * Dark: true black, not a tinted near-black. Devour runs on OLED phones where black is the
- * screen being off, which is both the deepest contrast available and the cheapest to draw.
- * The greys step far enough apart to be told apart at arm's length in daylight.
+ * Dark: near-black, deliberately not true black.
+ *
+ * The first build used #000000 with #FFFFFF text, which is 21:1 - the maximum a screen can
+ * do, and more than a reader wants. White text on true black bleeds into its own
+ * background on an OLED panel, and a long answer at that contrast is what "it tears my
+ * eyes" means. Lifting the page to #141414 and taking the text down to #E8E8E8 lands at
+ * about 15:1: still far above the 7:1 the strictest accessibility level asks for, and
+ * readable for an hour instead of a minute.
+ *
+ * The greys still step far enough apart to be told apart at arm's length in daylight, and
+ * the theme is still black and white: there is no hue in it anywhere.
  */
 const darkPalette: Palette = {
-  background: '#000000',
-  surface: '#141414',
-  surfaceStrong: '#1F1F1F',
-  edge: '#2E2E2E',
-  text: '#FFFFFF',
-  muted: '#A8A8A8',
-  faint: '#8A8A8A',
-  inverse: '#FFFFFF',
-  onInverse: '#000000',
+  background: '#141414',
+  surface: '#1F1F1F',
+  surfaceStrong: '#2B2B2B',
+  edge: '#3A3A3A',
+  text: '#E8E8E8',
+  muted: '#ABABAB',
+  faint: '#949494',
+  inverse: '#E8E8E8',
+  onInverse: '#141414',
 };
 
 /**
- * Light: paper white with ink. The mirror of the dark theme rather than an inversion of its
- * greys - perceived contrast is not symmetric, so the light greys are darker than the dark
- * theme's greys are light.
+ * Light: paper with ink, and for the same reason neither one is pure. A phone backlight
+ * behind #FFFFFF is a lamp pointed at the reader, and ink on paper was never #000000.
+ *
+ * The mirror of the dark theme rather than an inversion of its greys: perceived contrast is
+ * not symmetric, so the light greys are darker than the dark theme's greys are light.
  */
 const lightPalette: Palette = {
-  background: '#FFFFFF',
-  surface: '#F2F2F2',
-  surfaceStrong: '#E6E6E6',
-  edge: '#D6D6D6',
-  text: '#000000',
-  muted: '#4A4A4A',
-  faint: '#666666',
-  inverse: '#000000',
-  onInverse: '#FFFFFF',
+  background: '#FAFAFA',
+  surface: '#F0F0F0',
+  surfaceStrong: '#E4E4E4',
+  edge: '#D4D4D4',
+  text: '#1A1A1A',
+  muted: '#4F4F4F',
+  faint: '#626262',
+  inverse: '#1A1A1A',
+  onInverse: '#FAFAFA',
 };
 
 export type Theme = {

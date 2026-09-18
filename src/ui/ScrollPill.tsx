@@ -1,10 +1,11 @@
 import React, {useMemo} from 'react';
-import {Animated, Pressable, StyleSheet, Text} from 'react-native';
+import {Animated, Pressable, StyleSheet} from 'react-native';
 
 import {useAppear} from '../design/motion';
 import {useTheme} from '../design/ThemeProvider';
 import type {Theme} from '../design/theme';
-import {TOUCH_TARGET, radius, space, typography} from '../design/tokens';
+import {TOUCH_TARGET, radius, space} from '../design/tokens';
+import {Icon} from './Icon';
 
 type Props = {
   visible: boolean;
@@ -19,7 +20,8 @@ type Props = {
  * It exists because the chat only follows the stream while the user is already at the
  * bottom: scrolling up to read is a decision, and an interface that yanks the page back
  * down mid-sentence is fighting its user. The pill is the way back, and it is only there
- * when there is somewhere to go.
+ * when there is somewhere to go - it scales up out of the page when it appears and leaves
+ * faster than it arrived.
  */
 export function ScrollPill({visible, label, onPress, testID}: Props) {
   const theme = useTheme();
@@ -36,7 +38,7 @@ export function ScrollPill({visible, label, onPress, testID}: Props) {
         onPress={onPress}
         style={({pressed}) => [styles.pill, pressed && styles.pressed]}
         testID={testID}>
-        <Text style={styles.glyph}>↓</Text>
+        <Icon name="newest" size={20} tone="text" />
       </Pressable>
     </Animated.View>
   );
@@ -61,11 +63,6 @@ function createStyles(theme: Theme) {
     },
     pressed: {
       backgroundColor: theme.palette.surfaceStrong,
-    },
-    glyph: {
-      ...typography.body,
-      lineHeight: 20,
-      color: theme.palette.text,
     },
   });
 }
