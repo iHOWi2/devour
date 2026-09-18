@@ -70,7 +70,10 @@ Start with `CONTRIBUTING.md` if you are new to the project, then `docs/MAP.md`.
 
 ## Current status
 
-**Phase 2.2 - Interface, second pass: done.** The Phase 2.1 build was installed on a phone,
+**Phase 2.2 - Interface, second pass: done, verified in CI.** Workflow run
+[35314932414](https://github.com/iHOWi2/devour/actions/runs/35314932414), 2026-09-18: `lint,
+typecheck, tests` and `android debug apk` both passed on the first attempt, the Android job
+autolinking `react-native-svg` into the APK. The Phase 2.1 build was installed on a phone,
 and the screenshot that came back showed the send button drawing two empty boxes: the Unicode
 arrow it used is absent from that device's font. Every icon is now vector geometry
 (`src/ui/Icon.tsx`, seven of them), and nothing user facing is a text character any more. The

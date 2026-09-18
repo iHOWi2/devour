@@ -305,6 +305,13 @@ Defects the hardware screenshot found, all fixed here:
 | the device's large system font inflated code and the empty-state statement until both overflowed                                                    | `MAX_FONT_SCALE` caps `mono` and `display`, and prose keeps following the device                                                                           |
 | the retry action on a failure line took the page's text colour on an inverted fill, which in the dark theme is white on white - it was invisible    | a fourth button tone, `contrast`, mirrors `primary` for a control sitting on an inverted fill, and a test asserts no label is drawn in the colour under it |
 
+**Result, 2026-09-18.** Pull request #7, workflow run
+[35314932414](https://github.com/iHOWi2/devour/actions/runs/35314932414): lint,
+`format:check`, typecheck and 171 tests, then `gradle assembleDebug`, which compiled and
+autolinked `react-native-svg` into the APK, the check that the packaged APK still contains
+`assets/index.android.bundle`, and the `devour-debug-apk` artefact. Both jobs passed on the
+first attempt.
+
 What this phase does **not** claim: the icons have not been seen on the device whose font
 started this, the softer palette has not been read in sunlight, and no phone has yet folded
 a listing. Only hardware closes those.
