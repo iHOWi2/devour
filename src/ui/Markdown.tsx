@@ -1,9 +1,16 @@
-import React, {useMemo} from 'react';
-import {ScrollView, StyleSheet, Text, View} from 'react-native';
+import React, {useMemo, useState} from 'react';
+import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 
 import {useTheme} from '../design/ThemeProvider';
 import type {Theme} from '../design/theme';
-import {radius, space, typography} from '../design/tokens';
+import {
+  MAX_FONT_SCALE,
+  TOUCH_TARGET,
+  radius,
+  space,
+  typography,
+} from '../design/tokens';
+import {useI18n} from '../i18n';
 import type {InlineSpan, MarkdownBlock} from '../lib/markdown';
 import {parseMarkdown} from '../lib/markdown';
 import {CopyAction} from './CopyAction';
@@ -12,18 +19,26 @@ type Props = {
   text: string;
   /** Present only when the device can actually copy; see src/native/clipboard.ts. */
   onCopyCode?: (code: string) => Promise<void>;
-  copyLabel?: string;
-  copiedLabel?: string;
 };
+
+/**
+ * How many lines of a finished listing are shown before it is folded.
+ *
+ * A model asked for a file happily answers with two hundred lines, and on a phone that is
+ * three screens of scrolling between one sentence and the next. Fourteen lines is about
+ * half a screen: enough to recognise the code and decide, and the rest is one tap away.
+ */
+const CODE_PREVIEW_LINES = 14;
 
 /**
  * Renders the blocks the streaming parser produced.
  *
  * A code block is the one place this interface draws a container: machine text needs an
  * edge, a name and a way out of the app. Its header carries the language the model named
- * and the copy action, and long lines scroll sideways rather than wrapping into porridge.
+ * and the copy action, long lines scroll sideways rather than wrapping into porridge, and a
+ * long listing is folded down to a preview with the line count on the button that opens it.
  */
-export function Markdown({text, onCopyCode, copyLabel, copiedLabel}: Props) {
+export function Markdown({text, onCopyCode}: Props) {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const blocks = useMemo(() => parseMarkdown(text), [text]);
@@ -33,8 +48,6 @@ export function Markdown({text, onCopyCode, copyLabel, copiedLabel}: Props) {
       {blocks.map((block, index) => (
         <Block
           block={block}
-          copiedLabel={copiedLabel}
-          copyLabel={copyLabel}
           key={index}
           onCopyCode={onCopyCode}
           styles={styles}
@@ -52,6 +65,9 @@ function Spans({spans, styles}: {spans: InlineSpan[]; styles: Styles}) {
       {spans.map((span, index) => (
         <Text
           key={index}
+          maxFontSizeMultiplier={
+            span.code === true ? MAX_FONT_SCALE : undefined
+          }
           style={[
             span.code === true && styles.inlineCode,
             span.bold === true && styles.bold,
@@ -69,17 +85,9 @@ type BlockProps = {
   block: MarkdownBlock;
   styles: Styles;
   onCopyCode?: (code: string) => Promise<void>;
-  copyLabel?: string;
-  copiedLabel?: string;
 };
 
-function Block({
-  block,
-  styles,
-  onCopyCode,
-  copyLabel,
-  copiedLabel,
-}: BlockProps) {
+function Block({block, styles, onCopyCode}: BlockProps) {
   switch (block.type) {
     case 'paragraph':
       return (
@@ -123,29 +131,72 @@ function Block({
 
     case 'code':
       return (
-        <View style={styles.code}>
-          <View style={styles.codeHeader}>
-            <Text style={styles.codeLanguage}>{block.language ?? 'code'}</Text>
-            {onCopyCode === undefined ||
-            copyLabel === undefined ||
-            copiedLabel === undefined ? null : (
-              <CopyAction
-                copiedLabel={copiedLabel}
-                label={copyLabel}
-                onCopy={() => onCopyCode(block.code)}
-                testID="copy-code"
-              />
-            )}
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <Text style={styles.codeText}>{block.code}</Text>
-          </ScrollView>
-        </View>
+        <CodeBlock block={block} onCopyCode={onCopyCode} styles={styles} />
       );
 
     case 'rule':
       return <View style={styles.rule} />;
   }
+}
+
+type CodeProps = {
+  block: Extract<MarkdownBlock, {type: 'code'}>;
+  styles: Styles;
+  onCopyCode?: (code: string) => Promise<void>;
+};
+
+function CodeBlock({block, styles, onCopyCode}: CodeProps) {
+  const {t, plural} = useI18n();
+  const [expanded, setExpanded] = useState(false);
+  const lines = useMemo(() => block.code.split('\n'), [block.code]);
+
+  // A block that is still arriving is never folded: the user is watching it be written,
+  // and a preview that swallows the newest line would hide exactly what they are watching.
+  const foldable = block.closed && lines.length > CODE_PREVIEW_LINES;
+  const shown =
+    foldable && !expanded
+      ? lines.slice(0, CODE_PREVIEW_LINES).join('\n')
+      : block.code;
+
+  return (
+    <View style={styles.code}>
+      <View style={styles.codeHeader}>
+        <Text style={styles.codeLanguage}>
+          {block.language ?? t('code.unnamed')}
+        </Text>
+        {onCopyCode === undefined ? null : (
+          <CopyAction
+            copiedLabel={t('chat.copied')}
+            label={t('chat.copy')}
+            onCopy={() => onCopyCode(block.code)}
+            testID="copy-code"
+          />
+        )}
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.codeContent}
+        horizontal
+        showsHorizontalScrollIndicator={false}>
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.codeText}>
+          {shown}
+        </Text>
+      </ScrollView>
+
+      {foldable ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{expanded}}
+          onPress={() => setExpanded(current => !current)}
+          style={({pressed}) => [styles.codeFold, pressed && styles.pressed]}
+          testID="code-fold">
+          <Text style={styles.codeFoldLabel}>
+            {expanded ? t('code.fold') : plural('code.lines', lines.length)}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
 }
 
 function createStyles(theme: Theme) {
@@ -216,7 +267,9 @@ function createStyles(theme: Theme) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      minHeight: space.xl,
       paddingLeft: space.md,
+      paddingRight: space.sm,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: theme.palette.edge,
     },
@@ -224,10 +277,26 @@ function createStyles(theme: Theme) {
       ...typography.caption,
       color: theme.palette.faint,
     },
+    codeContent: {
+      padding: space.md,
+    },
     codeText: {
       ...typography.mono,
       color: theme.palette.text,
-      padding: space.md,
+    },
+    codeFold: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: TOUCH_TARGET,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme.palette.edge,
+    },
+    pressed: {
+      backgroundColor: theme.palette.surfaceStrong,
+    },
+    codeFoldLabel: {
+      ...typography.label,
+      color: theme.palette.muted,
     },
     rule: {
       marginVertical: space.lg,

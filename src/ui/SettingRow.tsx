@@ -3,7 +3,14 @@ import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {useTheme} from '../design/ThemeProvider';
 import type {Theme} from '../design/theme';
-import {TOUCH_TARGET, radius, space, typography} from '../design/tokens';
+import {
+  MAX_FONT_SCALE,
+  TOUCH_TARGET,
+  radius,
+  space,
+  typography,
+} from '../design/tokens';
+import {Icon} from './Icon';
 
 type Props = {
   label: string;
@@ -43,9 +50,15 @@ export function SettingRow({
           <Text style={styles.description}>{description}</Text>
         )}
       </View>
-      {value === undefined ? null : <Text style={styles.value}>{value}</Text>}
+      {value === undefined ? null : (
+        <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.value}>
+          {value}
+        </Text>
+      )}
       {onPress === undefined ? null : (
-        <Text style={[styles.chevron, disabled && styles.dim]}>›</Text>
+        <View style={styles.chevron}>
+          <Icon name="next" size={20} tone={disabled ? 'faint' : 'muted'} />
+        </View>
       )}
     </>
   );
@@ -99,8 +112,6 @@ function createStyles(theme: Theme) {
       color: theme.palette.muted,
     },
     chevron: {
-      ...typography.title,
-      color: theme.palette.faint,
       marginLeft: space.sm,
     },
     dim: {

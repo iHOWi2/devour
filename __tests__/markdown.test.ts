@@ -63,6 +63,32 @@ describe('markdown blocks', () => {
     ]);
   });
 
+  /**
+   * Models wrap their fences in blank lines, and rendering those literally leaves a gap
+   * under the block's header that reads as a broken layout. Only the ends are trimmed:
+   * a blank line between two functions is the author's paragraph break.
+   */
+  it('drops the blank lines a fence is padded with, and keeps the ones inside it', () => {
+    const blocks = parseMarkdown(
+      '```py\n\n  \ndef a():\n    pass\n\n\ndef b():\n    pass\n\n```',
+    );
+
+    expect(blocks).toEqual([
+      {
+        type: 'code',
+        language: 'py',
+        code: 'def a():\n    pass\n\n\ndef b():\n    pass',
+        closed: true,
+      },
+    ]);
+  });
+
+  it('holds an empty fence as empty rather than as a blank line', () => {
+    expect(parseMarkdown('```\n\n```')).toEqual([
+      {type: 'code', language: null, code: '', closed: true},
+    ]);
+  });
+
   it('never treats markdown inside a fence as markdown', () => {
     const blocks = parseMarkdown('```\n# not a heading\n- not a list\n```');
 

@@ -19,7 +19,7 @@ devour/
 |-- LICENSE                         MIT
 |-- index.js                        React Native entry point: registers App under 'devour'
 |-- app.json                        app name for the CLI and the registered component
-|-- package.json                    dependencies, npm scripts, engines
+|-- package.json                    dependencies (react-native-svg), npm scripts, engines
 |-- package-lock.json               the pinned dependency tree; CI installs with `npm ci`
 |-- tsconfig.json                   extends @react-native/typescript-config, strict, node types
 |-- babel.config.js                 @react-native/babel-preset
@@ -72,7 +72,7 @@ devour/
 |   |-- design/
 |   |   |-- tokens.ts               space, radius, typography, motion, TOUCH_TARGET (no colour)
 |   |   |-- theme.ts                monochrome dark and light palettes, resolveTheme
-|   |   |-- motion.ts               entrance, press, pulse, appear, surface crossfade hooks
+|   |   |-- motion.ts               entrance, press, pulse, appear, crossfade, swap, wave
 |   |   `-- ThemeProvider.tsx       theme context, follows the device unless overridden
 |   |-- i18n/
 |   |   |-- index.ts                public surface: useI18n, types, re-exports
@@ -98,14 +98,16 @@ devour/
 |   |   |-- SettingsScreen.tsx      model, interface, data and device sections
 |   |   `-- ProviderForm.tsx        the endpoint form itself: validation and its messages
 |   `-- ui/
-|       |-- ActionButton.tsx        primary, quiet and plain button with press feedback
+|       |-- ActionButton.tsx        primary, quiet, ghost and contrast button, press feedback
 |       |-- Caret.tsx               the pulsing block cursor that says an answer is arriving
 |       |-- ChatTurn.tsx            one turn: raised block or full-width answer, its actions
 |       |-- Composer.tsx            rounded field with one round control: send, or stop
 |       |-- CopyAction.tsx          copies, then says so - only once the clipboard took it
 |       |-- DataRow.tsx             label + monospaced value, no state dot
 |       |-- EmptyState.tsx          the one large statement, staggered in
-|       |-- Markdown.tsx            renders the parsed markdown blocks, code with a copy
+|       |-- GhostLines.tsx          placeholder bars where the answer will be, with a wave
+|       |-- Icon.tsx                the seven drawn icons; no font, no character, no glyph
+|       |-- Markdown.tsx            renders the parsed blocks; folds a long listing
 |       |-- RoundAction.tsx         the 44 px circle in the composer: send or stop
 |       |-- ScreenHeader.tsx        title, what the screen points at, its text actions
 |       |-- ScrollPill.tsx          jump back to the newest turn, fades when there is none
@@ -128,6 +130,7 @@ devour/
 |   |-- provider.test.ts            request shape, headers, chunk mapping, presets
 |   |-- storage.test.ts             document parsers reject junk; the turn cap holds
 |   |-- session.test.ts             send, stream, cancel, retry, hydrate, persistence state
+|   |-- ui.test.tsx                 icons are geometry, ghost lines, tones, code folding
 |   |-- ChatScreen.test.tsx         sends, streams, stops, retries, copies, regenerates
 |   |-- SettingsScreen.test.tsx     device facts, presets, endpoint form, data, appearance
 |   `-- App.test.tsx                the real composition root degrades honestly with no bridge

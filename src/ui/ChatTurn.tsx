@@ -9,6 +9,7 @@ import {radius, space, typography} from '../design/tokens';
 import {useI18n} from '../i18n';
 import {Caret} from './Caret';
 import {CopyAction} from './CopyAction';
+import {GhostLines} from './GhostLines';
 import {Markdown} from './Markdown';
 import {ActionButton} from './ActionButton';
 
@@ -27,8 +28,9 @@ type Props = {
  * agent's answer sits directly on the page at full width. Two shapes, no bubbles with
  * tails, no avatars, no name labels - who spoke is obvious from where the text is.
  *
- * While an answer is arriving a block caret pulses at the end of it. A turn that was
- * stopped keeps what arrived and says it was stopped, because a truncated answer with no
+ * Before the first token there are three placeholder bars where the lines will be; from the
+ * first token on, a block caret pulses at the end of the text. A turn that was stopped
+ * keeps what arrived and says it was stopped, because a truncated answer with no
  * explanation looks like a bug.
  */
 export function ChatTurn({message, onCopy, onRegenerate}: Props) {
@@ -49,19 +51,15 @@ export function ChatTurn({message, onCopy, onRegenerate}: Props) {
         <Text style={styles.userText}>{message.text}</Text>
       ) : (
         <View>
-          <Markdown
-            copiedLabel={t('chat.copied')}
-            copyLabel={t('chat.copy')}
-            onCopyCode={onCopy}
-            text={message.text}
-          />
-          {streaming ? (
+          <Markdown onCopyCode={onCopy} text={message.text} />
+          {streaming && empty ? (
+            <GhostLines label={t('chat.waiting')} testID="chat-ghost" />
+          ) : null}
+
+          {streaming && !empty ? (
             <View
               accessibilityLabel={t('chat.streaming')}
               style={styles.caretRow}>
-              {empty ? (
-                <Text style={styles.note}>{t('chat.waiting')}</Text>
-              ) : null}
               <Caret testID="chat-caret" />
             </View>
           ) : null}
@@ -86,10 +84,11 @@ export function ChatTurn({message, onCopy, onRegenerate}: Props) {
           )}
           {onRegenerate === undefined ? null : (
             <ActionButton
+              icon="again"
               label={t('chat.regenerate')}
               onPress={onRegenerate}
               testID="chat-regenerate"
-              tone="plain"
+              tone="ghost"
             />
           )}
         </View>
@@ -110,7 +109,7 @@ function createStyles(theme: Theme) {
       paddingVertical: space.md,
       borderRadius: radius.block,
       borderBottomRightRadius: space.xs,
-      backgroundColor: theme.palette.surface,
+      backgroundColor: theme.palette.surfaceStrong,
     },
     theirs: {
       alignSelf: 'stretch',

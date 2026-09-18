@@ -27,7 +27,7 @@ The first direction failed its own source: a warm cream background with a terrac
 is the first named pattern on the list above, and the decorative phase number on the opening
 screen was a numbered marker with no sequence behind it. Both are gone.
 
-## Motion (studied for Phase 2.1, applied in it)
+## Motion (studied for Phase 2.1, re-read for Phase 2.2)
 
 Source: the motion-design skill listed below. The principles that shaped the motion layer in
 [DESIGN.md](DESIGN.md) and `src/design/motion.ts`:
@@ -42,6 +42,15 @@ Source: the motion-design skill listed below. The principles that shaped the mot
 - ambient looping motion is reserved for "the machine is working", and is the first thing to
   drop when the device asks for less motion
 - a slide implies a spatial relationship; siblings that do not have one should crossfade
+
+Re-read for Phase 2.2, after the first build was called "not smooth" on hardware. The tables
+in the same skill are explicit about what that word means, and the first pass had missed it:
+smoothness is the curve, not the duration. A curve whose second handle sits at the end value
+`(0.22, 1, 0.36, 1)` spends the whole second half of its time settling, which is what reads
+as a physical movement; a shorter duration on a curve that lands hard reads as a cut. The
+skill's other correction: a placeholder that mirrors the shape of the content it is waiting
+for beats a status line, because it tells the eye where to be - which is what the ghost lines
+in the chat are.
 
 ## Skill architecture
 

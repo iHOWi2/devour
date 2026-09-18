@@ -4,7 +4,7 @@ import {Animated, StyleSheet, View} from 'react-native';
 import {useEntrance} from '../design/motion';
 import {useTheme} from '../design/ThemeProvider';
 import type {Theme} from '../design/theme';
-import {space, typography} from '../design/tokens';
+import {MAX_FONT_SCALE, space, typography} from '../design/tokens';
 import {ActionButton} from './ActionButton';
 
 type Props = {
@@ -31,7 +31,11 @@ export function EmptyState({title, body, action, testID}: Props) {
 
   return (
     <View style={styles.block} testID={testID}>
-      <Animated.Text style={[styles.title, first]}>{title}</Animated.Text>
+      <Animated.Text
+        maxFontSizeMultiplier={MAX_FONT_SCALE}
+        style={[styles.title, first]}>
+        {title}
+      </Animated.Text>
       <Animated.Text style={[styles.body, second]}>{body}</Animated.Text>
       {action === undefined ? null : (
         <Animated.View style={[styles.action, third]}>

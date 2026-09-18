@@ -1,22 +1,25 @@
 import React, {useMemo} from 'react';
-import {Animated, Pressable, StyleSheet, Text, View} from 'react-native';
+import {Animated, Pressable, StyleSheet} from 'react-native';
 
-import {usePressScale} from '../design/motion';
+import {usePressScale, useSwap} from '../design/motion';
 import {useTheme} from '../design/ThemeProvider';
 import type {Theme} from '../design/theme';
-import {TOUCH_TARGET, radius, typography} from '../design/tokens';
+import {TOUCH_TARGET, radius} from '../design/tokens';
+import {Icon} from './Icon';
 
 /**
  * The composer's single round control.
  *
- * Two glyphs, both drawn rather than fetched: `send` is an upward arrow, `stop` is a filled
- * square. No icon font ships with Devour, and a missing glyph is a broken button - the
- * square is a plain View and the arrow is one character that every Android font has.
+ * It has two jobs and never moves between them: while a stream runs, the same circle under
+ * the thumb stops it. Which job it is doing is carried by the icon and by the fill - a
+ * filled circle is a live action, an outlined one is a control with nothing to do yet -
+ * and the icon scales in when either changes, so the swap is visible without being a
+ * flourish.
  */
-export type Glyph = 'send' | 'stop';
+export type RoundActionIcon = 'send' | 'stop';
 
 type Props = {
-  glyph: Glyph;
+  icon: RoundActionIcon;
   label: string;
   onPress: () => void;
   disabled?: boolean;
@@ -24,7 +27,7 @@ type Props = {
 };
 
 export function RoundAction({
-  glyph,
+  icon,
   label,
   onPress,
   disabled = false,
@@ -33,6 +36,7 @@ export function RoundAction({
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const press = usePressScale(0.94);
+  const swap = useSwap(`${icon}-${disabled ? 'idle' : 'live'}`);
 
   return (
     <Animated.View style={disabled ? undefined : press.style}>
@@ -44,13 +48,11 @@ export function RoundAction({
         onPress={onPress}
         onPressIn={press.onPressIn}
         onPressOut={press.onPressOut}
-        style={[styles.button, disabled && styles.disabled]}
+        style={[styles.button, disabled && styles.idle]}
         testID={testID}>
-        {glyph === 'stop' ? (
-          <View style={styles.square} />
-        ) : (
-          <Text style={styles.arrow}>{'\u2191'}</Text>
-        )}
+        <Animated.View style={swap}>
+          <Icon name={icon} size={24} tone={disabled ? 'faint' : 'onInverse'} />
+        </Animated.View>
       </Pressable>
     </Animated.View>
   );
@@ -66,19 +68,10 @@ function createStyles(theme: Theme) {
       justifyContent: 'center',
       backgroundColor: theme.palette.inverse,
     },
-    disabled: {
-      opacity: 0.25,
-    },
-    arrow: {
-      ...typography.title,
-      lineHeight: 26,
-      color: theme.palette.onInverse,
-    },
-    square: {
-      width: 13,
-      height: 13,
-      borderRadius: 3,
-      backgroundColor: theme.palette.onInverse,
+    idle: {
+      backgroundColor: theme.palette.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.palette.edge,
     },
   });
 }

@@ -4,7 +4,7 @@ import {Animated, StyleSheet, Text, View} from 'react-native';
 import {useEntrance} from '../design/motion';
 import {useTheme} from '../design/ThemeProvider';
 import type {Theme} from '../design/theme';
-import {radius, space, typography} from '../design/tokens';
+import {MAX_FONT_SCALE, radius, space, typography} from '../design/tokens';
 import {ActionButton} from './ActionButton';
 
 /**
@@ -42,6 +42,7 @@ export function StateLine({tone, text, detail, action, testID}: Props) {
         </Text>
         {detail === undefined || detail === null ? null : (
           <Text
+            maxFontSizeMultiplier={MAX_FONT_SCALE}
             style={[styles.detail, alert ? styles.onAlert : styles.onQuiet]}>
             {detail}
           </Text>
@@ -53,7 +54,7 @@ export function StateLine({tone, text, detail, action, testID}: Props) {
             label={action.label}
             onPress={action.onPress}
             testID={action.testID}
-            tone={alert ? 'plain' : 'quiet'}
+            tone={alert ? 'contrast' : 'quiet'}
           />
         </View>
       )}

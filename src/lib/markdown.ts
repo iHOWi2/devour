@@ -97,6 +97,29 @@ export function parseInline(text: string): InlineSpan[] {
   return spans;
 }
 
+/**
+ * The text inside a fence, without the empty lines at its two ends.
+ *
+ * Models routinely open a fence, leave a blank line, and close the same way. Rendered
+ * literally that is a gap under the block's header that looks like a broken layout, and a
+ * container taller than the code in it. Only the ends are touched: blank lines inside a
+ * listing are the author's paragraphs.
+ */
+function fenceCode(lines: readonly string[]): string {
+  let start = 0;
+  let end = lines.length;
+
+  while (start < end && lines[start].trim().length === 0) {
+    start += 1;
+  }
+
+  while (end > start && lines[end - 1].trim().length === 0) {
+    end -= 1;
+  }
+
+  return lines.slice(start, end).join('\n');
+}
+
 export function parseMarkdown(text: string): MarkdownBlock[] {
   const blocks: MarkdownBlock[] = [];
   const lines = text.split('\n');
@@ -148,7 +171,7 @@ export function parseMarkdown(text: string): MarkdownBlock[] {
         blocks.push({
           type: 'code',
           language: fence.language,
-          code: fence.lines.join('\n'),
+          code: fenceCode(fence.lines),
           closed: true,
         });
         fence = null;
@@ -232,7 +255,7 @@ export function parseMarkdown(text: string): MarkdownBlock[] {
     blocks.push({
       type: 'code',
       language: fence.language,
-      code: fence.lines.join('\n'),
+      code: fenceCode(fence.lines),
       closed: false,
     });
   }

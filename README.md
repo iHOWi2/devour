@@ -70,18 +70,22 @@ Start with `CONTRIBUTING.md` if you are new to the project, then `docs/MAP.md`.
 
 ## Current status
 
-**Phase 2.1 - Interface: done, verified in CI.** Workflow run
-[35311528088](https://github.com/iHOWi2/devour/actions/runs/35311528088), 2026-09-18: `lint,
-typecheck, tests` and `android debug apk` both passed on the first attempt, including the
-check that the packaged APK carries `assets/index.android.bundle`. The chat from Phase 2 kept its behaviour and
-lost its template: the interface is now monochrome - black, white and the greys between them,
-no hue anywhere - with one motion identity, a streaming caret instead of a status row, copy
-and regenerate on an answer, smart autoscroll, and a settings screen that is actually about
-settings. The Phase 1.1 artefact was verified by hand on a TECNO KJ6 (Android 13, API 33,
-arm64-v8a): the app launches with no development server, reports real device and storage
-facts, detects Termux as the runtime host, and picks Russian and the dark theme from the
-device settings. **No artefact since Phase 1.1 has been installed on a phone**, so how this
-interface actually feels under a thumb is still unverified.
+**Phase 2.2 - Interface, second pass: done.** The Phase 2.1 build was installed on a phone,
+and the screenshot that came back showed the send button drawing two empty boxes: the Unicode
+arrow it used is absent from that device's font. Every icon is now vector geometry
+(`src/ui/Icon.tsx`, seven of them), and nothing user facing is a text character any more. The
+dark theme came off the extremes - `#FFFFFF` on `#000000` is 21:1, which on an OLED panel is
+glare, so the page is `#141414` and the text `#E8E8E8` - motion moved to a curve that settles
+instead of landing hard, three placeholder bars now stand where an arriving answer will be, a
+finished listing over 14 lines folds with its hidden line count on the button, and a large
+system font can no longer inflate code or a headline out of the layout.
+
+The Phase 1.1 artefact was verified by hand on a TECNO KJ6 (Android 13, API 33, arm64-v8a):
+the app launches with no development server, reports real device and storage facts, detects
+Termux as the runtime host, and picks Russian and the dark theme from the device settings. The
+Phase 2.1 artefact was installed and photographed, which is what found the broken glyph.
+**This build has not been on a phone yet**, so how the drawn icons and the calmer palette
+actually read under a thumb is still unverified.
 
 What exists in code today:
 
@@ -90,9 +94,13 @@ What exists in code today:
   markdown while they arrive with a caret at the end, a Stop that actually cancels the
   request, copy and "again" on an answer, a failure strip carrying the endpoint's own words
   with a retry, and an honest empty state when no endpoint is configured
-- a **monochrome interface** with one motion identity: a single entrance pattern, press
-  feedback, a sliding segmented selection, a crossfade between surfaces, and every animation
-  with a still state that says the same thing - reduced motion is a setting, not a rewrite
+- a **monochrome interface** - black, white and the greys between them, no hue anywhere, and
+  neither pure extreme - with one motion identity: a single entrance pattern on a curve that
+  settles, press feedback, an icon that scales in when a control changes what it does, a
+  sliding segmented selection, a crossfade between surfaces, and every animation with a still
+  state that says the same thing - reduced motion is a setting, not a rewrite
+- **seven drawn icons** (`react-native-svg`) and not one text glyph: a character an unknown
+  font lacks renders as an empty box, which is exactly how this was found
 - an **agent runtime** (`src/agent`) behind one interface: `ModelProvider`, a pure
   conversation reducer, an `AgentSession` that owns send, retry, cancel and restore, and a
   React context that is the UI's only door into it
@@ -105,7 +113,7 @@ What exists in code today:
 - dark and light themes, following the device appearance setting unless overridden
 - English and Russian, following the device locale unless overridden, with real Russian plural
   rules
-- 150 Jest tests across 15 suites: the reducer, the SSE decoder, the provider, the transport
+- 171 Jest tests across 16 suites: the reducer, the SSE decoder, the provider, the transport
   boundary, the markdown reader, the document, secret and clipboard wrappers, the session
   state machine, measured colour contrast, and both screens
 - GitHub Actions: lint, format, typecheck and tests, plus an Android job that runs
