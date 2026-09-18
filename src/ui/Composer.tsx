@@ -4,7 +4,7 @@ import {StyleSheet, TextInput, View} from 'react-native';
 import {useTheme} from '../design/ThemeProvider';
 import type {Theme} from '../design/theme';
 import {radius, space, typography} from '../design/tokens';
-import {ActionButton} from './ActionButton';
+import {RoundAction} from './RoundAction';
 
 type Props = {
   value: string;
@@ -19,9 +19,12 @@ type Props = {
 };
 
 /**
- * The composer exists now, and only now: Phase 1 deliberately drew no input box, because
- * there was nothing behind it. While a stream is running the same corner offers Stop, so
- * the action the user needs is always the one under their thumb.
+ * One rounded field with one round control.
+ *
+ * The control does not move between states: while a stream runs the same circle stops it,
+ * so the thing under the thumb is always the thing the user needs. The field keeps taking
+ * text during a stream - typing the next question while reading the answer is normal - and
+ * sending is what waits.
  */
 export function Composer({
   value,
@@ -39,27 +42,29 @@ export function Composer({
 
   return (
     <View style={styles.composer}>
-      <TextInput
-        accessibilityLabel={placeholder}
-        editable={!streaming}
-        multiline
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={theme.palette.muted}
-        style={styles.input}
-        testID="composer-input"
-        value={value}
-      />
+      <View style={styles.field}>
+        <TextInput
+          accessibilityLabel={placeholder}
+          multiline
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={theme.palette.faint}
+          style={styles.input}
+          testID="composer-input"
+          value={value}
+        />
+      </View>
       {streaming ? (
-        <ActionButton
+        <RoundAction
+          glyph="stop"
           label={stopLabel}
           onPress={onStop}
           testID="composer-stop"
-          tone="quiet"
         />
       ) : (
-        <ActionButton
+        <RoundAction
           disabled={!canSend}
+          glyph="send"
           label={sendLabel}
           onPress={onSend}
           testID="composer-send"
@@ -77,18 +82,23 @@ function createStyles(theme: Theme) {
       paddingHorizontal: space.lg,
       paddingTop: space.sm,
     },
+    field: {
+      flex: 1,
+      marginRight: space.sm,
+      borderRadius: radius.block,
+      backgroundColor: theme.palette.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.palette.edge,
+      justifyContent: 'center',
+      minHeight: 44,
+    },
     input: {
       ...typography.body,
       color: theme.palette.text,
-      flex: 1,
-      maxHeight: 132,
-      marginRight: space.sm,
-      paddingHorizontal: space.md,
-      paddingVertical: space.sm,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.palette.edge,
-      borderRadius: radius.sheet,
-      backgroundColor: theme.palette.surface,
+      maxHeight: 148,
+      paddingHorizontal: space.lg,
+      paddingTop: space.sm,
+      paddingBottom: space.sm,
     },
   });
 }

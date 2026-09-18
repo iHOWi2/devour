@@ -1,8 +1,11 @@
 import {
+  DEFAULT_PROVIDER_SETTINGS,
   ModelHttpError,
+  PROVIDER_PRESETS,
   StreamCancelledError,
   createOpenAiCompatibleProvider,
   createProvider,
+  validateProviderSettings,
 } from '../src/agent';
 import type {
   ModelChunk,
@@ -200,5 +203,30 @@ describe('provider selection', () => {
     expect(createProvider({settings, apiKey: null}).id).toBe(
       'openai-compatible',
     );
+  });
+});
+
+describe('provider presets', () => {
+  it('offers only presets that can be saved as they are', () => {
+    PROVIDER_PRESETS.forEach(preset => {
+      expect(validateProviderSettings(preset)).toBeNull();
+    });
+  });
+
+  it('keeps every preset distinct, so a tap is never a no-op', () => {
+    const ids = PROVIDER_PRESETS.map(preset => preset.id);
+    const endpoints = PROVIDER_PRESETS.map(preset => preset.baseUrl);
+
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(endpoints).size).toBe(endpoints.length);
+  });
+
+  it('never becomes a default: an unconfigured Devour stays unconfigured', () => {
+    expect(
+      PROVIDER_PRESETS.some(
+        preset => preset.baseUrl === DEFAULT_PROVIDER_SETTINGS.baseUrl,
+      ),
+    ).toBe(false);
+    expect(DEFAULT_PROVIDER_SETTINGS.baseUrl).toBe('');
   });
 });

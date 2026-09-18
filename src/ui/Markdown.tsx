@@ -4,21 +4,26 @@ import {ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useTheme} from '../design/ThemeProvider';
 import type {Theme} from '../design/theme';
 import {radius, space, typography} from '../design/tokens';
-import {parseMarkdown} from '../lib/markdown';
 import type {InlineSpan, MarkdownBlock} from '../lib/markdown';
+import {parseMarkdown} from '../lib/markdown';
+import {CopyAction} from './CopyAction';
 
 type Props = {
   text: string;
+  /** Present only when the device can actually copy; see src/native/clipboard.ts. */
+  onCopyCode?: (code: string) => Promise<void>;
+  copyLabel?: string;
+  copiedLabel?: string;
 };
 
 /**
- * Renders what a model actually writes: prose, fenced code, headings, lists, quotes.
+ * Renders the blocks the streaming parser produced.
  *
- * Code scrolls sideways instead of wrapping, because a wrapped command line is a lie about
- * where the line breaks are. Everything else follows the type scale: prose in the sans,
- * machine text in the mono, and no colour beyond the palette.
+ * A code block is the one place this interface draws a container: machine text needs an
+ * edge, a name and a way out of the app. Its header carries the language the model named
+ * and the copy action, and long lines scroll sideways rather than wrapping into porridge.
  */
-export function Markdown({text}: Props) {
+export function Markdown({text, onCopyCode, copyLabel, copiedLabel}: Props) {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const blocks = useMemo(() => parseMarkdown(text), [text]);
@@ -26,7 +31,14 @@ export function Markdown({text}: Props) {
   return (
     <View>
       {blocks.map((block, index) => (
-        <Block block={block} key={index} styles={styles} />
+        <Block
+          block={block}
+          copiedLabel={copiedLabel}
+          copyLabel={copyLabel}
+          key={index}
+          onCopyCode={onCopyCode}
+          styles={styles}
+        />
       ))}
     </View>
   );
@@ -53,7 +65,21 @@ function Spans({spans, styles}: {spans: InlineSpan[]; styles: Styles}) {
   );
 }
 
-function Block({block, styles}: {block: MarkdownBlock; styles: Styles}) {
+type BlockProps = {
+  block: MarkdownBlock;
+  styles: Styles;
+  onCopyCode?: (code: string) => Promise<void>;
+  copyLabel?: string;
+  copiedLabel?: string;
+};
+
+function Block({
+  block,
+  styles,
+  onCopyCode,
+  copyLabel,
+  copiedLabel,
+}: BlockProps) {
   switch (block.type) {
     case 'paragraph':
       return (
@@ -98,9 +124,19 @@ function Block({block, styles}: {block: MarkdownBlock; styles: Styles}) {
     case 'code':
       return (
         <View style={styles.code}>
-          {block.language === null ? null : (
-            <Text style={styles.codeLanguage}>{block.language}</Text>
-          )}
+          <View style={styles.codeHeader}>
+            <Text style={styles.codeLanguage}>{block.language ?? 'code'}</Text>
+            {onCopyCode === undefined ||
+            copyLabel === undefined ||
+            copiedLabel === undefined ? null : (
+              <CopyAction
+                copiedLabel={copiedLabel}
+                label={copyLabel}
+                onCopy={() => onCopyCode(block.code)}
+                testID="copy-code"
+              />
+            )}
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <Text style={styles.codeText}>{block.code}</Text>
           </ScrollView>
@@ -120,10 +156,9 @@ function createStyles(theme: Theme) {
       marginTop: space.sm,
     },
     heading: {
-      ...typography.body,
-      fontWeight: '600',
+      ...typography.heading,
       color: theme.palette.text,
-      marginTop: space.md,
+      marginTop: space.lg,
     },
     headingStrong: {
       ...typography.title,
@@ -143,7 +178,7 @@ function createStyles(theme: Theme) {
       color: theme.palette.text,
     },
     quote: {
-      marginTop: space.sm,
+      marginTop: space.md,
       paddingLeft: space.md,
       borderLeftWidth: 2,
       borderLeftColor: theme.palette.edge,
@@ -161,8 +196,8 @@ function createStyles(theme: Theme) {
     },
     bullet: {
       ...typography.body,
-      color: theme.palette.muted,
-      width: 24,
+      color: theme.palette.faint,
+      width: 22,
     },
     listText: {
       ...typography.body,
@@ -171,23 +206,33 @@ function createStyles(theme: Theme) {
     },
     code: {
       marginTop: space.md,
-      padding: space.md,
-      borderRadius: radius.sheet,
+      borderRadius: radius.control,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.palette.edge,
       backgroundColor: theme.palette.surface,
+      overflow: 'hidden',
+    },
+    codeHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingLeft: space.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.palette.edge,
     },
     codeLanguage: {
-      ...typography.label,
-      color: theme.palette.muted,
-      marginBottom: space.xs,
+      ...typography.caption,
+      color: theme.palette.faint,
     },
     codeText: {
       ...typography.mono,
       color: theme.palette.text,
+      padding: space.md,
     },
     rule: {
-      marginTop: space.md,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: theme.palette.edge,
+      marginVertical: space.lg,
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: theme.palette.edge,
     },
   });
 }

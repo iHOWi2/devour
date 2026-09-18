@@ -180,11 +180,79 @@ author installs the artefact and reports back.
 
 Defects found while building the phase:
 
-| Defect                                                                                                                                                                                                                                                            | Fix                                                                                                              |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `jest.resetAllMocks()` in a suite's `afterEach` also wiped the implementations inside `react-native-safe-area-context`'s own mock, which is built from `jest.fn()`; `useSafeAreaInsets()` then returned `undefined` and twelve tests failed inside `createStyles` | reset only the mock the suite owns; the shared mock is installed once in `jest.setup.js`                         |
-| the jest mock shipped by `react-native-safe-area-context` is a default export, so `jest.mock('react-native-safe-area-context', () => require('.../jest/mock'))` installs a module namespace whose hooks are all `undefined`                                       | the setup file installs `require('react-native-safe-area-context/jest/mock').default`                            |
-| Prettier had never run in this repository - the sandbox that built Phases 0-1.2 could not install it - so committed files were formatted by hand and `npm run format:check` would have failed                                                                     | ran the formatter over everything and made `format:check` a CI step, with the version pinned by the new lockfile |
+| Defect                                                                                                                                                                                                                                                                          | Fix                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `jest.resetAllMocks()` in a suite's `afterEach` also wiped the implementations inside `react-native-safe-area-context`'s own mock, which is built from `jest.fn()`; `useSafeAreaInsets()` then returned `undefined` and twelve tests failed inside `createStyles`               | reset only the mock the suite owns; the shared mock is installed once in `jest.setup.js`                                                                                                        |
+| the jest mock shipped by `react-native-safe-area-context` is a default export, so `jest.mock('react-native-safe-area-context', () => require('.../jest/mock'))` installs a module namespace whose hooks are all `undefined`                                                     | the setup file installs `require('react-native-safe-area-context/jest/mock').default`                                                                                                           |
+| Prettier had never run in this repository - the sandbox that built Phases 0-1.2 could not install it - so committed files were formatted by hand and `npm run format:check` would have failed                                                                                   | ran the formatter over everything and made `format:check` a CI step, with the version pinned by the new lockfile                                                                                |
+| the API key never saved on a phone: `DevourSecrets` validated names with `^[a-z0-9][a-z0-9._-]{0,63}$`, and the name the app asks for is `provider.apiKey` - so every write was rejected as an invalid name. Found on hardware, in the first minute of use, by a CI-green build | both Kotlin modules accept upper case (`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`) and a test asserts the document and secret names the application actually uses, which is the check that was missing |
+
+## Phase 2.1 - Interface (done)
+
+The chat worked and looked like a template. The author's verdict on the first build was
+blunt: the colours were wrong, there were no animations at all, and the settings were not
+settings. Black and white was the answer he asked for, and it is the right one.
+
+This phase changed no product behaviour that Phase 2 shipped. It changed the design language,
+added the motion layer, and gave the chat the affordances a chat needs.
+
+Delivered:
+
+- **A monochrome design language.** Every colour in both themes is now a grey - `#000000` to
+  `#FFFFFF` and nine semantic roles between them - and the maximum-contrast inversion is the
+  only accent. The previous warm cream and terracotta was, by the letter of the design
+  research in `docs/RESEARCH.md`, the most recognisable signature of a machine-generated
+  interface. Contrast is no longer a matter of taste either: `theme.test.ts` computes the WCAG
+  ratio of every text role against every surface it can sit on.
+- **A motion layer** (`src/design/motion.ts`): one signature curve, a four-step duration
+  palette, one entrance pattern - rise and fade, decelerating - press feedback that settles
+  without bounce, a caret that pulses while the machine works, a sliding segmented selection,
+  and a crossfade between the two surfaces. Built on `Animated` with the native driver rather
+  than a new dependency (decision 19). Every animation has a still state that carries the same
+  information, so `reduce motion` is a branch and not a redesign.
+- **The chat affordances.** A block caret at the end of an answer replaced the status row that
+  was always on screen; copy and "again" sit under the last answer; the page follows the
+  stream only while the reader is at the bottom, with a pill to jump back; the composer is one
+  rounded field and one round control that stops what it started; the empty state is one large
+  statement instead of a decorative phase number.
+- **Copying, honestly.** `DevourClipboard` is a fourth Kotlin module (decision 20).
+  `Copied` appears only after the clipboard has taken the text, and a build without the module
+  shows no copy action at all rather than a button that quietly fails.
+- **A settings screen that is about settings.** `SystemScreen` became `SettingsScreen` with
+  four sections - model, interface, data, environment - and four endpoint presets that fill
+  both fields in one tap, because typing `https://openrouter.ai/api/v1` on a phone keyboard is
+  the worst moment in setting Devour up. No preset is a default: an unconfigured Devour stays
+  unconfigured.
+- **`regenerate` in the session**, which drops a finished answer and asks the same question
+  again. Branching conversations are Phase 2.2, so this replaces rather than forks.
+- 16 new dictionary keys in both languages, and a test that fails on a key the interface no
+  longer shows - the dictionary cannot rot quietly. 150 tests in 15 suites.
+
+**Exit criteria:** nothing on screen depends on a hue; every text role clears 4.5:1 on every
+surface it can sit on; every animation has a still state; no screen carries a signature of a
+generated interface from the list in `docs/DESIGN.md`.
+
+What this phase does **not** claim: the interface has not been seen on a phone. Contrast is
+measured, layout is not - Russian is 15-30% longer than English, and only hardware shows how
+the composer behaves with a real keyboard, how the caret reads while a real endpoint streams,
+and whether the monochrome strip is as unmistakable in sunlight as the test says it is.
+
+Defects found while building the phase:
+
+| Defect                                                                                                                                                                                 | Fix                                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| the first animated component took the whole suite down: the native driver calls `findNodeHandle`, and a test renderer has no host views, so `getNativeTagFromPublicInstance` is absent | `jest.setup.js` reports animations as disabled, which is React Native's own switch to the implementation that resolves every animation to its final value |
+| a `setTimeout` inside `CopyAction` outlived the test that started it and logged into a torn-down jest environment                                                                      | the copy test unmounts the renderer, which is also the proof that the component clears its own timer                                                      |
+
+## Phase 2.2 - Conversations
+
+One conversation is a demo; a tool people use keeps several. An index document, a title taken
+from the first turn, switching, renaming and deleting, and the branch that `regenerate`
+deliberately does not create today. Haptics on the actions that commit something, and
+edit-and-resend on your own turn, belong here too.
+
+**Exit criteria:** several conversations survive a restart, each one titled by its own first
+question; deleting one removes its document; no screen has to be redesigned to hold them.
 
 ## Phase 3 - Workspace
 

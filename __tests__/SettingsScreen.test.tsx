@@ -4,7 +4,7 @@ import type {ReactTestInstance, ReactTestRenderer} from 'react-test-renderer';
 import {act, create} from 'react-test-renderer';
 
 import {AgentProvider} from '../src/agent';
-import type {ProviderSettings} from '../src/agent';
+import type {Conversation, ProviderSettings} from '../src/agent';
 import {ThemeProvider} from '../src/design/ThemeProvider';
 import {themes} from '../src/design/theme';
 import type {ThemePreference} from '../src/design/theme';
@@ -12,7 +12,7 @@ import {LanguageProvider} from '../src/i18n';
 import type {Language, LanguagePreference} from '../src/i18n';
 import type {DeviceEnvironment} from '../src/native';
 import {readEnvironment} from '../src/native';
-import {SystemScreen} from '../src/screens/SystemScreen';
+import {SettingsScreen} from '../src/screens/SettingsScreen';
 
 jest.mock('../src/native', () => ({
   readEnvironment: jest.fn(),
@@ -51,11 +51,13 @@ type Options = {
   settings?: ProviderSettings | null;
   storedKey?: string | null;
   failingSave?: boolean;
+  conversation?: Conversation;
 };
 
-async function renderSystem(options: Options = {}) {
+async function renderSettings(options: Options = {}) {
   const saved: ProviderSettings[] = [];
   const keys: Array<string | null> = [];
+  const cleared = {conversation: false};
   let renderer: ReactTestRenderer | undefined;
 
   await act(async () => {
@@ -76,9 +78,20 @@ async function renderSystem(options: Options = {}) {
                 return Promise.resolve();
               },
             }}
-            conversationStore={null}
+            conversationStore={
+              options.conversation === undefined
+                ? null
+                : {
+                    load: () => Promise.resolve(options.conversation ?? null),
+                    save: () => Promise.resolve(),
+                    clear: () => {
+                      cleared.conversation = true;
+                      return Promise.resolve();
+                    },
+                  }
+            }
             resolveProvider={() => {
-              throw new Error('the system screen never streams');
+              throw new Error('the settings screen never streams');
             }}
             settingsStore={{
               load: () => Promise.resolve(options.settings ?? null),
@@ -91,7 +104,7 @@ async function renderSystem(options: Options = {}) {
                 return Promise.resolve();
               },
             }}>
-            <SystemScreen onOpenChat={jest.fn()} />
+            <SettingsScreen onOpenChat={jest.fn()} />
           </AgentProvider>
         </ThemeProvider>
       </LanguageProvider>,
@@ -106,7 +119,7 @@ async function renderSystem(options: Options = {}) {
     await flush();
   });
 
-  return {keys, renderer, saved};
+  return {cleared, keys, renderer, saved};
 }
 
 function output(renderer: ReactTestRenderer): string {
@@ -114,7 +127,7 @@ function output(renderer: ReactTestRenderer): string {
 }
 
 function backgroundColour(renderer: ReactTestRenderer): string | undefined {
-  const [root] = renderer.root.findAllByProps({testID: 'system-screen'});
+  const [root] = renderer.root.findAllByProps({testID: 'settings-screen'});
 
   if (root === undefined) {
     throw new Error('the screen root was not found');
@@ -170,9 +183,9 @@ afterEach(() => {
   readEnvironmentMock.mockReset();
 });
 
-describe('system screen: the device', () => {
+describe('settings screen: the device', () => {
   it('shows the real device facts once the bridge answers', async () => {
-    const {renderer} = await renderSystem();
+    const {renderer} = await renderSettings();
     const rendered = output(renderer);
 
     expect(rendered).toContain('Google Pixel 8');
@@ -183,7 +196,7 @@ describe('system screen: the device', () => {
   });
 
   it('speaks the device language without being asked', async () => {
-    const {renderer} = await renderSystem({deviceLanguage: 'ru'});
+    const {renderer} = await renderSettings({deviceLanguage: 'ru'});
     const rendered = output(renderer);
 
     expect(rendered).toContain('Окружение');
@@ -204,7 +217,7 @@ describe('system screen: the device', () => {
       },
     });
 
-    const {renderer} = await renderSystem({deviceLanguage: 'ru'});
+    const {renderer} = await renderSettings({deviceLanguage: 'ru'});
 
     expect(output(renderer)).toContain('termux не установлен');
   });
@@ -212,7 +225,7 @@ describe('system screen: the device', () => {
   it('shows an honest error state with a retry when the bridge is missing', async () => {
     readEnvironmentMock.mockRejectedValue(new Error('not registered'));
 
-    const {renderer} = await renderSystem();
+    const {renderer} = await renderSettings();
     const rendered = output(renderer);
 
     expect(rendered).toContain('Native bridge unavailable');
@@ -223,7 +236,7 @@ describe('system screen: the device', () => {
   it('recovers when the user retries', async () => {
     readEnvironmentMock.mockRejectedValueOnce(new Error('not registered'));
 
-    const {renderer} = await renderSystem();
+    const {renderer} = await renderSettings();
     expect(output(renderer)).toContain('Native bridge unavailable');
 
     await press(renderer, 'retry');
@@ -232,9 +245,9 @@ describe('system screen: the device', () => {
   });
 });
 
-describe('system screen: the interface', () => {
+describe('settings screen: the interface', () => {
   it('switches language from the settings section', async () => {
-    const {renderer} = await renderSystem();
+    const {renderer} = await renderSettings();
 
     await press(renderer, 'segment-language-ru');
 
@@ -243,7 +256,7 @@ describe('system screen: the interface', () => {
   });
 
   it('switches theme from the settings section', async () => {
-    const {renderer} = await renderSystem({theme: 'dark'});
+    const {renderer} = await renderSettings({theme: 'dark'});
 
     expect(backgroundColour(renderer)).toBe(themes.dark.palette.background);
 
@@ -253,9 +266,59 @@ describe('system screen: the interface', () => {
   });
 });
 
-describe('system screen: the model endpoint', () => {
+describe('settings screen: the data', () => {
+  it('clears the stored conversation and says it happened', async () => {
+    const {cleared, renderer} = await renderSettings({
+      conversation: {
+        id: 'c-1',
+        createdAt: 1,
+        updatedAt: 2,
+        messages: [
+          {
+            id: 'u-1',
+            role: 'user',
+            text: 'something private',
+            status: 'complete',
+            createdAt: 1,
+          },
+        ],
+      },
+    });
+
+    await press(renderer, 'settings-clear-chat');
+
+    expect(cleared.conversation).toBe(true);
+    expect(output(renderer)).toContain('conversation cleared');
+  });
+
+  it('says where the conversation and the key are kept', async () => {
+    const {renderer} = await renderSettings({deviceLanguage: 'ru'});
+
+    expect(output(renderer)).toContain('Android Keystore');
+  });
+});
+
+describe('settings screen: the model endpoint', () => {
+  it('fills both fields from a preset, so nobody types an endpoint by hand', async () => {
+    const {renderer, saved} = await renderSettings();
+
+    await press(renderer, 'preset-openrouter');
+
+    expect(output(renderer)).toContain('https://openrouter.ai/api/v1');
+
+    await press(renderer, 'provider-save');
+
+    expect(saved).toEqual([
+      {
+        kind: 'openai-compatible',
+        baseUrl: 'https://openrouter.ai/api/v1',
+        model: 'openai/gpt-4o-mini',
+      },
+    ]);
+  });
+
   it('shows the stored endpoint and that a key is already held', async () => {
-    const {renderer} = await renderSystem({
+    const {renderer} = await renderSettings({
       settings: {
         kind: 'openai-compatible',
         baseUrl: 'https://api.example.com/v1',
@@ -272,7 +335,7 @@ describe('system screen: the model endpoint', () => {
   });
 
   it('refuses an endpoint that is not an address, and says which field', async () => {
-    const {renderer, saved} = await renderSystem();
+    const {renderer, saved} = await renderSettings();
 
     await type(renderer, 'provider-base-url', 'api.example.com');
     await type(renderer, 'provider-model', 'some-model');
@@ -285,7 +348,7 @@ describe('system screen: the model endpoint', () => {
   });
 
   it('refuses to save without a model name', async () => {
-    const {renderer, saved} = await renderSystem();
+    const {renderer, saved} = await renderSettings();
 
     await type(renderer, 'provider-base-url', 'https://api.example.com/v1');
     await press(renderer, 'provider-save');
@@ -295,7 +358,7 @@ describe('system screen: the model endpoint', () => {
   });
 
   it('stores the endpoint, puts the key in the secret store and clears the field', async () => {
-    const {keys, renderer, saved} = await renderSystem();
+    const {keys, renderer, saved} = await renderSettings();
 
     await type(renderer, 'provider-base-url', 'https://api.example.com/v1/ ');
     await type(renderer, 'provider-model', ' some-model ');
@@ -318,7 +381,7 @@ describe('system screen: the model endpoint', () => {
   });
 
   it('forgets the key when asked', async () => {
-    const {keys, renderer} = await renderSystem({storedKey: 'sk-stored'});
+    const {keys, renderer} = await renderSettings({storedKey: 'sk-stored'});
 
     await press(renderer, 'provider-clear-key');
 
@@ -327,7 +390,7 @@ describe('system screen: the model endpoint', () => {
   });
 
   it('says so when the settings cannot be written', async () => {
-    const {renderer} = await renderSystem({failingSave: true});
+    const {renderer} = await renderSettings({failingSave: true});
 
     await type(renderer, 'provider-base-url', 'https://api.example.com/v1');
     await type(renderer, 'provider-model', 'some-model');

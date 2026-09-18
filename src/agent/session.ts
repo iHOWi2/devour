@@ -130,6 +130,21 @@ export class AgentSession {
 
   /** Answers the last user turn again, dropping the attempt that failed or was stopped. */
   async retry(): Promise<void> {
+    await this.answerAgain(false);
+  }
+
+  /**
+   * Answers the last user turn again and throws away the answer that is already there.
+   *
+   * The difference from `retry` is the whole point: this drops a finished turn, because the
+   * user read it and wants another one. The dropped text is gone - keeping both would make
+   * this a branching conversation, which is a Phase 2.2 feature and not a side effect.
+   */
+  async regenerate(): Promise<void> {
+    await this.answerAgain(true);
+  }
+
+  private async answerAgain(replaceComplete: boolean): Promise<void> {
     if (this.state.status === 'streaming') {
       return;
     }
@@ -139,7 +154,7 @@ export class AgentSession {
     if (
       last !== null &&
       last.role === 'assistant' &&
-      last.status !== 'complete'
+      (replaceComplete || last.status !== 'complete')
     ) {
       this.apply({type: 'message.drop', at: this.now(), id: last.id});
     }

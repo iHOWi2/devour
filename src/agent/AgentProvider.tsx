@@ -56,6 +56,8 @@ export type AgentControl = {
   send(text: string): void;
   cancel(): void;
   retry(): void;
+  /** Throws away the last answer and asks the same question again. */
+  regenerate(): void;
   reset(): void;
   saveProvider(draft: ProviderDraft): Promise<void>;
   clearApiKey(): Promise<void>;
@@ -194,6 +196,7 @@ export function AgentProvider({
       send: text => start(session.send(text)),
       cancel: () => session.cancel(),
       retry: () => start(session.retry()),
+      regenerate: () => start(session.regenerate()),
       reset: () => start(session.reset()),
       saveProvider,
       clearApiKey,

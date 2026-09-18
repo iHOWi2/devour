@@ -1,12 +1,21 @@
 import React, {useMemo} from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {Animated, StyleSheet, Text, View} from 'react-native';
 
+import {useEntrance} from '../design/motion';
 import {useTheme} from '../design/ThemeProvider';
-import type {Palette, Theme} from '../design/theme';
-import {space, typography} from '../design/tokens';
+import type {Theme} from '../design/theme';
+import {radius, space, typography} from '../design/tokens';
 import {ActionButton} from './ActionButton';
 
-export type StateTone = 'accent' | 'ok' | 'warn' | 'danger' | 'muted';
+/**
+ * What went wrong, or what the build cannot do, as one line the user can act on.
+ *
+ * `alert` inverts: black on white in the dark theme, white on black in the light one. In a
+ * monochrome interface that is the loudest thing available, which is what a failure
+ * deserves, and it stays unmistakable for anyone who cannot tell red from amber. `quiet` is
+ * for a limitation the user should know about but does not have to fix now.
+ */
+export type StateTone = 'alert' | 'quiet';
 
 type Props = {
   tone: StateTone;
@@ -17,49 +26,38 @@ type Props = {
   testID?: string;
 };
 
-function toneColour(palette: Palette, tone: StateTone): string {
-  switch (tone) {
-    case 'accent':
-      return palette.accent;
-    case 'ok':
-      return palette.ok;
-    case 'warn':
-      return palette.warn;
-    case 'danger':
-      return palette.danger;
-    default:
-      return palette.muted;
-  }
-}
-
-/**
- * What the machine is doing or what went wrong, as one line above the composer: a six pixel
- * state dot, a short label, the endpoint's own detail, and at most one action. A status line
- * that can be read is better than a spinner that cannot.
- */
 export function StateLine({tone, text, detail, action, testID}: Props) {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const colour = toneColour(theme.palette, tone);
+  const entrance = useEntrance({distance: 6});
+  const alert = tone === 'alert';
 
   return (
-    <View style={styles.line} testID={testID}>
-      <View style={[styles.dot, {backgroundColor: colour}]} />
+    <Animated.View
+      style={[styles.line, alert ? styles.alert : styles.quiet, entrance]}
+      testID={testID}>
       <View style={styles.body}>
-        <Text style={[styles.text, {color: colour}]}>{text}</Text>
+        <Text style={[styles.text, alert ? styles.onAlert : styles.onQuiet]}>
+          {text}
+        </Text>
         {detail === undefined || detail === null ? null : (
-          <Text style={styles.detail}>{detail}</Text>
+          <Text
+            style={[styles.detail, alert ? styles.onAlert : styles.onQuiet]}>
+            {detail}
+          </Text>
         )}
       </View>
       {action === undefined ? null : (
-        <ActionButton
-          label={action.label}
-          onPress={action.onPress}
-          testID={action.testID}
-          tone="quiet"
-        />
+        <View style={styles.action}>
+          <ActionButton
+            label={action.label}
+            onPress={action.onPress}
+            testID={action.testID}
+            tone={alert ? 'plain' : 'quiet'}
+          />
+        </View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -69,24 +67,35 @@ function createStyles(theme: Theme) {
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: space.sm,
+      paddingHorizontal: space.md,
+      borderRadius: radius.control,
     },
-    dot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      marginRight: space.sm,
+    alert: {
+      backgroundColor: theme.palette.inverse,
+    },
+    quiet: {
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.palette.edge,
     },
     body: {
       flex: 1,
       paddingRight: space.sm,
+    },
+    action: {
+      marginLeft: space.xs,
     },
     text: {
       ...typography.label,
     },
     detail: {
       ...typography.mono,
-      color: theme.palette.muted,
       marginTop: 2,
+    },
+    onAlert: {
+      color: theme.palette.onInverse,
+    },
+    onQuiet: {
+      color: theme.palette.muted,
     },
   });
 }

@@ -70,37 +70,41 @@ Start with `CONTRIBUTING.md` if you are new to the project, then `docs/MAP.md`.
 
 ## Current status
 
-**Phase 2 - Chat: done, verified in CI.** Workflow run
-[35275846429](https://github.com/iHOWi2/devour/actions/runs/35275846429), 2026-09-17: `lint, typecheck,
-tests` and `android debug apk` both passed on the first attempt, including the check that the
-packaged APK carries `assets/index.android.bundle`. The Phase 1.1 artefact was also verified
-by hand on a TECNO KJ6 (Android 13, API 33, arm64-v8a): the app launches with no development
-server, reports real device and storage facts, detects Termux as the runtime host, and picks
-Russian and the dark theme from the device settings. **The Phase 2 artefact has not been
-installed on a phone yet.**
+**Phase 2.1 - Interface: done, verified in CI.** The chat from Phase 2 kept its behaviour and
+lost its template: the interface is now monochrome - black, white and the greys between them,
+no hue anywhere - with one motion identity, a streaming caret instead of a status row, copy
+and regenerate on an answer, smart autoscroll, and a settings screen that is actually about
+settings. The Phase 1.1 artefact was verified by hand on a TECNO KJ6 (Android 13, API 33,
+arm64-v8a): the app launches with no development server, reports real device and storage
+facts, detects Termux as the runtime host, and picks Russian and the dark theme from the
+device settings. **No artefact since Phase 1.1 has been installed on a phone**, so how this
+interface actually feels under a thumb is still unverified.
 
 What exists in code today:
 
 - React Native 0.87 + TypeScript app shell on the new architecture with Hermes
 - a **chat** that talks to any OpenAI-compatible endpoint: streamed answers rendered as
-  markdown while they arrive, a Stop that actually cancels the request, a failure line
-  carrying the endpoint's own words with a retry, and an honest empty state when no endpoint
-  is configured
+  markdown while they arrive with a caret at the end, a Stop that actually cancels the
+  request, copy and "again" on an answer, a failure strip carrying the endpoint's own words
+  with a retry, and an honest empty state when no endpoint is configured
+- a **monochrome interface** with one motion identity: a single entrance pattern, press
+  feedback, a sliding segmented selection, a crossfade between surfaces, and every animation
+  with a still state that says the same thing - reduced motion is a setting, not a rewrite
 - an **agent runtime** (`src/agent`) behind one interface: `ModelProvider`, a pure
   conversation reducer, an `AgentSession` that owns send, retry, cancel and restore, and a
   React context that is the UI's only door into it
-- a **Kotlin native layer** with three real modules: `DevourEnvironment` (device, storage and
+- a **Kotlin native layer** with four real modules: `DevourEnvironment` (device, storage and
   runtime-host facts), `DevourStorage` (JSON documents written atomically into the app's
-  private files directory) and `DevourSecrets` (AES/GCM under a non-extractable
-  AndroidKeyStore key, which is where the API key lives)
+  private files directory), `DevourSecrets` (AES/GCM under a non-extractable AndroidKeyStore
+  key, which is where the API key lives) and `DevourClipboard`
 - the conversation and the endpoint settings survive a restart; when the native store is
   missing, the chat still runs and says history is not being saved
 - dark and light themes, following the device appearance setting unless overridden
 - English and Russian, following the device locale unless overridden, with real Russian plural
   rules
-- 125 Jest tests across 15 suites: the reducer, the SSE decoder, the provider, the transport
-  boundary, the markdown reader, the document and secret wrappers, the session state machine,
-  and both screens
+- 150 Jest tests across 15 suites: the reducer, the SSE decoder, the provider, the transport
+  boundary, the markdown reader, the document, secret and clipboard wrappers, the session
+  state machine, measured colour contrast, and both screens
 - GitHub Actions: lint, format, typecheck and tests, plus an Android job that runs
   `assembleDebug`, proves the JS bundle is packaged, and uploads `app-debug.apk`
 
@@ -116,8 +120,8 @@ unchanged.
 What is **not** done yet, and is not pretended to be:
 
 - nobody has yet watched a real endpoint stream onto a phone. The provider is tested against
-  a fake transport; live streaming, keyboard feel and the restore path after a real process
-  kill wait for a hardware report
+  a fake transport; live streaming, keyboard feel, the restore path after a real process kill
+  and how the new interface reads in the hand wait for a hardware report
 - there is one conversation, with no list, no titles and no token accounting
 - the theme and language choice still lives for the session only; the document store exists
   now, so Phase 3 wires the preference documents with the rest of the settings
@@ -185,15 +189,15 @@ Full annotated map, including where new work belongs: [docs/MAP.md](docs/MAP.md)
 |   `-- app/src/main/java/com/devour/app/
 |       |-- MainApplication.kt
 |       |-- MainActivity.kt
-|       `-- nativemodules/       DevourEnvironment, DevourStorage, DevourSecrets
+|       `-- nativemodules/       DevourEnvironment, Storage, Secrets, Clipboard
 |-- src/
 |   |-- App.tsx                  composition root: safe area, language, theme, agent
 |   |-- agent/                   the runtime: providers, session, conversation, storage
-|   |-- design/                  tokens, both palettes, ThemeProvider
+|   |-- design/                  tokens, both palettes, motion hooks, ThemeProvider
 |   |-- i18n/                    dictionaries, plural rules, LanguageProvider
 |   |-- lib/                     pure helpers: formatting, the markdown reader
 |   |-- native/                  typed wrappers over the Kotlin layer
-|   |-- screens/                 RootScreen, ChatScreen, SystemScreen
+|   |-- screens/                 RootScreen, ChatScreen, SettingsScreen
 |   `-- ui/                      small presentational components
 |-- __tests__/                   Jest unit tests
 |-- docs/                        map, architecture, design, skills, roadmap, research
@@ -209,6 +213,7 @@ Full annotated map, including where new work belongs: [docs/MAP.md](docs/MAP.md)
 | 1.1   | Themes (dark, light) and localisation (English, Russian) from device settings     | done    |
 | 1.2   | Navigation of the project itself: the map, the handoff briefing, the device row   | done    |
 | 2     | Chat: streaming, model abstraction, conversation state, markdown and code blocks  | done    |
+| 2.1   | Interface: monochrome design language, motion, chat affordances, settings screen  | done    |
 | 3     | Workspace: project selection, filesystem access, file tree, workspace state       | planned |
 | 4     | Runtime: shell execution, PTY, Termux integration, command output                 | planned |
 | 5     | Agent tools: file tools, search, shell, Git, process control                      | planned |

@@ -23,6 +23,7 @@ class DevourNativePackage : BaseReactPackage() {
         DevourEnvironmentModule.NAME -> DevourEnvironmentModule(reactContext)
         DevourStorageModule.NAME -> DevourStorageModule(reactContext)
         DevourSecretsModule.NAME -> DevourSecretsModule(reactContext)
+        DevourClipboardModule.NAME -> DevourClipboardModule(reactContext)
         else -> null
       }
 
@@ -31,6 +32,7 @@ class DevourNativePackage : BaseReactPackage() {
         info(DevourEnvironmentModule.NAME, DevourEnvironmentModule::class.java),
         info(DevourStorageModule.NAME, DevourStorageModule::class.java),
         info(DevourSecretsModule.NAME, DevourSecretsModule::class.java),
+        info(DevourClipboardModule.NAME, DevourClipboardModule::class.java),
     )
   }
 

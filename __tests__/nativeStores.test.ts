@@ -1,11 +1,14 @@
 import {NativeModules} from 'react-native';
 
 import {
+  CLIPBOARD_MODULE_NAME,
   NativeBridgeUnavailableError,
   SECRETS_MODULE_NAME,
   STORAGE_MODULE_NAME,
+  copyToClipboard,
   deleteDocument,
   deleteSecret,
+  isClipboardAvailable,
   isDocumentStoreAvailable,
   isSecretStoreAvailable,
   readDocument,
@@ -25,6 +28,7 @@ const modules = NativeModules as Record<string, unknown>;
 afterEach(() => {
   delete modules[STORAGE_MODULE_NAME];
   delete modules[SECRETS_MODULE_NAME];
+  delete modules[CLIPBOARD_MODULE_NAME];
 });
 
 describe('document store', () => {
@@ -129,5 +133,26 @@ describe('secret store', () => {
 
     await expect(readSecret('provider.api_key')).resolves.toBeNull();
     await expect(readSecret('provider.api_key')).resolves.toBeNull();
+  });
+});
+
+describe('clipboard', () => {
+  it('reports itself missing when the module is not registered', () => {
+    expect(isClipboardAvailable()).toBe(false);
+  });
+
+  it('fails with a typed error instead of crashing when the module is missing', async () => {
+    await expect(copyToClipboard('npm test')).rejects.toBeInstanceOf(
+      NativeBridgeUnavailableError,
+    );
+  });
+
+  it('hands the text over exactly once, and resolves with nothing to say', async () => {
+    const setString = jest.fn(() => Promise.resolve(true));
+    modules[CLIPBOARD_MODULE_NAME] = {setString};
+
+    await expect(copyToClipboard('npm test')).resolves.toBeUndefined();
+    expect(setString).toHaveBeenCalledTimes(1);
+    expect(setString).toHaveBeenCalledWith('npm test');
   });
 });

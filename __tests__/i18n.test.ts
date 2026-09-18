@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 import {
   DEFAULT_LANGUAGE,
   LANGUAGES,
@@ -37,9 +40,39 @@ describe('dictionaries', () => {
     });
   });
 
+  /**
+   * A dictionary is where dead strings go to hide: nothing fails when a key stops being
+   * used, it just keeps being translated forever. The source is the authority.
+   */
+  it('keeps no key the interface no longer shows', () => {
+    const root = path.join(__dirname, '..', 'src');
+    const sources: string[] = [];
+
+    const walk = (directory: string) => {
+      fs.readdirSync(directory, {withFileTypes: true}).forEach(entry => {
+        const full = path.join(directory, entry.name);
+
+        if (entry.isDirectory()) {
+          walk(full);
+        } else if (/\.tsx?$/.test(entry.name)) {
+          sources.push(fs.readFileSync(full, 'utf8'));
+        }
+      });
+    };
+
+    walk(root);
+
+    const code = sources.join('\n');
+    const unused = MESSAGE_KEYS.filter(
+      key => !code.includes(`'${key}'`) && !code.includes(`"${key}"`),
+    );
+
+    expect(unused).toEqual([]);
+  });
+
   it('leaves no prose untranslated', () => {
     const prose: MessageKey[] = [
-      'phase.chat',
+      'nav.settings',
       'status.reading',
       'bridge.connected',
       'failure.title',
@@ -52,9 +85,17 @@ describe('dictionaries', () => {
       'theme.dark',
       'theme.light',
       'chat.send',
+      'chat.empty.title',
       'chat.empty.ready',
       'chat.empty.unconfigured',
       'chat.waiting',
+      'chat.copy',
+      'chat.regenerate',
+      'chat.newest',
+      'settings.data',
+      'settings.data.hint',
+      'settings.clearChat',
+      'row.bridge',
       'error.provider.unauthorized',
       'provider.apiKey.stored',
       'provider.hint',

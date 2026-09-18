@@ -22,6 +22,8 @@ export {
   toAgentFailure,
 } from './errors';
 export type {AgentErrorCode, AgentFailure} from './errors';
+export {PROVIDER_PRESETS} from './presets';
+export type {ProviderPreset} from './presets';
 export {DEVOUR_SYSTEM_PROMPT} from './prompt';
 export {createProvider, createOpenAiCompatibleProvider} from './providers';
 export {AgentSession} from './session';
