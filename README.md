@@ -116,7 +116,7 @@ What exists in code today:
 - dark and light themes, following the device appearance setting unless overridden
 - English and Russian, following the device locale unless overridden, with real Russian plural
   rules
-- 171 Jest tests across 16 suites: the reducer, the SSE decoder, the provider, the transport
+- 173 Jest tests across 16 suites: the reducer, the SSE decoder, the provider, the transport
   boundary, the markdown reader, the document, secret and clipboard wrappers, the session
   state machine, measured colour contrast, and both screens
 - GitHub Actions: lint, format, typecheck and tests, plus an Android job that runs

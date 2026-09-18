@@ -118,7 +118,8 @@ function Block({block, styles, onCopyCode}: BlockProps) {
         <View style={styles.list}>
           {block.items.map((item, index) => (
             <View key={index} style={styles.listItem}>
-              <Text style={styles.bullet}>
+              <Text
+                style={[styles.bullet, block.ordered && styles.bulletOrdered]}>
                 {block.ordered ? `${index + 1}.` : '\u2022'}
               </Text>
               <Text style={styles.listText}>
@@ -245,10 +246,15 @@ function createStyles(theme: Theme) {
       flexDirection: 'row',
       marginTop: space.xs,
     },
+    // A marker column wide enough for "10." leaves a dot floating half a word away from
+    // its own line, which is what it looked like on a device with a large system font.
     bullet: {
       ...typography.body,
       color: theme.palette.faint,
-      width: 22,
+      width: 16,
+    },
+    bulletOrdered: {
+      width: 24,
     },
     listText: {
       ...typography.body,
@@ -269,7 +275,7 @@ function createStyles(theme: Theme) {
       justifyContent: 'space-between',
       minHeight: space.xl,
       paddingLeft: space.md,
-      paddingRight: space.sm,
+      paddingRight: space.xs,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: theme.palette.edge,
     },

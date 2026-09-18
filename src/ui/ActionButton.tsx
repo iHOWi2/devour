@@ -1,12 +1,10 @@
 import React, {useMemo} from 'react';
-import {Animated, Pressable, StyleSheet, Text, View} from 'react-native';
+import {Animated, Pressable, StyleSheet, Text} from 'react-native';
 
 import {usePressScale} from '../design/motion';
 import {useTheme} from '../design/ThemeProvider';
 import type {Theme} from '../design/theme';
 import {TOUCH_TARGET, radius, space, typography} from '../design/tokens';
-import {Icon} from './Icon';
-import type {IconName, IconTone} from './Icon';
 
 /**
  * `primary` is the one loud control on a screen: a filled block at maximum contrast.
@@ -24,25 +22,20 @@ type Props = {
   label: string;
   onPress: () => void;
   tone?: ButtonTone;
-  /** Drawn before the label, at label size. Only where it adds to the word. */
-  icon?: IconName;
   disabled?: boolean;
   accessibilityLabel?: string;
   testID?: string;
 };
 
-const LABEL_TONE: Readonly<Record<ButtonTone, IconTone>> = {
-  primary: 'onInverse',
-  quiet: 'text',
-  ghost: 'muted',
-  contrast: 'onInverse',
-};
-
+/**
+ * A button with an icon beside its label is not offered on purpose. An icon that repeats the
+ * word is ink for nothing, and the two actions that read without a word at all are icons
+ * without one (`src/ui/IconAction.tsx`).
+ */
 export function ActionButton({
   label,
   onPress,
   tone = 'primary',
-  icon,
   disabled = false,
   accessibilityLabel,
   testID,
@@ -68,11 +61,6 @@ export function ActionButton({
           disabled && styles.disabled,
         ]}
         testID={testID}>
-        {icon === undefined ? null : (
-          <View style={styles.icon}>
-            <Icon name={icon} size={16} tone={LABEL_TONE[tone]} />
-          </View>
-        )}
         <Text style={[styles.label, styles[`${tone}Label`]]}>{label}</Text>
       </Pressable>
     </Animated.View>
@@ -118,9 +106,6 @@ function createStyles(theme: Theme) {
     },
     disabled: {
       opacity: 0.35,
-    },
-    icon: {
-      marginRight: space.xs,
     },
     label: {
       ...typography.label,

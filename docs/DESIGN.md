@@ -125,6 +125,14 @@ metrics, loaded before the first frame, to draw seven shapes.
 
 An icon is hidden from screen readers; the control it sits in carries the label.
 
+**An icon with a word next to it is ink for nothing.** The two actions under an answer -
+copy, and ask again - are icons alone: a circle 36 px across with the word spoken rather
+than drawn, and `hitSlop` padding the touch area out to the 44 px floor. The ink may be
+smaller than the finger; the rule is about the finger. This is deliberately not a general
+licence: icon-only is for actions that every chat has had for years, and anything a user
+would have to guess at keeps its label. `ActionButton` therefore offers no icon at all -
+either the word carries the action, or the picture does.
+
 ## Motion
 
 One personality for the whole application: quick, and smooth rather than firm - no bounce, no
@@ -208,7 +216,7 @@ The conversation is the product surface. What ships today:
 
   and then sync the project.|
 
-   [copy] Copy   [again] Again
+   (copy) (again)
                           ( v )
 
   ( Describe a task                         ) ( ^ )
@@ -232,11 +240,10 @@ The three round shapes in that sketch are drawn icons, not characters: `send`, `
 - From the first token on, a block caret pulses at the end of the text. That is the entire
   streaming indicator: it is where the eye already is, it needs no row of its own, and it
   cannot be mistaken for a decorative spinner. The still state is the caret being visible.
-- Code is monospace on a raised block, with the language the model named and a copy action in
-  its header. Copying says `Copied` only after the clipboard has actually taken the text - and
-  swaps the copy icon for a tick, which is the answer to a press that otherwise changes
-  nothing on screen - and the action is absent entirely in a build whose native module is
-  missing.
+- Code is monospace on a raised block, with the language the model named and a copy icon in
+  its header. Copying confirms only after the clipboard has actually taken the text, and it
+  confirms by becoming a tick - the answer to a press that otherwise changes nothing on
+  screen. The action is absent entirely in a build whose native module is missing.
 - A finished listing longer than 14 lines is folded, and the button that opens it counts what
   is hidden: `Show all 37 lines`. A model asked for a file answers with two hundred lines, and
   unfolded that is three screens of scrolling between one sentence and the next. A listing
@@ -244,8 +251,9 @@ The three round shapes in that sketch are drawn icons, not characters: `send`, `
 - Fences are trimmed of the blank lines models pad them with. Rendered literally they leave a
   gap under the block's header that reads as a broken layout; blank lines inside the listing
   are the author's and stay.
-- Under the last answer: `Copy` and `Again`. `Again` replaces the answer rather than adding a
-  second one - a branching conversation is a Phase 2.3 feature, not a side effect.
+- Under the last answer: two icon circles, copy and again, with no captions - the words are
+  spoken, not drawn. `Again` replaces the answer rather than adding a second one - a
+  branching conversation is a Phase 2.3 feature, not a side effect.
 - A stopped turn keeps the text that arrived and says it was stopped. A truncated answer with
   no explanation looks like a bug.
 - The page follows the stream only while the reader is already at the bottom. Scrolling up to
@@ -347,7 +355,8 @@ Every screen that ships must satisfy all of these:
 - reads correctly in both themes, and nothing on it depends on a hue
 - every text role clears 4.5:1 on every surface it can sit on, checked by test
 - every visible string comes from the dictionary, and both languages render without clipping
-- one-handed: primary actions sit in the lower half; touch targets are at least 44 px
+- one-handed: primary actions sit in the lower half; every touch target clears 44 px,
+  measured including `hitSlop` rather than by the size of the ink
 - no component contains a hex colour, a hard-coded spacing number, or an English string
 - no icon, affordance or state is a text character: a glyph the device's font lacks renders as
   an empty box, and that has already happened on hardware
