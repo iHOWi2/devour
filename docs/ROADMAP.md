@@ -232,6 +232,13 @@ Delivered:
 surface it can sit on; every animation has a still state; no screen carries a signature of a
 generated interface from the list in `docs/DESIGN.md`.
 
+**Result, 2026-09-18.** Pull request #6, workflow run
+[35311528088](https://github.com/iHOWi2/devour/actions/runs/35311528088): lint,
+`format:check`, typecheck and 150 tests, then `gradle assembleDebug`, which compiled the new
+Kotlin clipboard module, the check that the packaged APK still contains
+`assets/index.android.bundle`, and the `devour-debug-apk` artefact. Both jobs passed on the
+first attempt.
+
 What this phase does **not** claim: the interface has not been seen on a phone. Contrast is
 measured, layout is not - Russian is 15-30% longer than English, and only hardware shows how
 the composer behaves with a real keyboard, how the caret reads while a real endpoint streams,

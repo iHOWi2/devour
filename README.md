@@ -70,7 +70,10 @@ Start with `CONTRIBUTING.md` if you are new to the project, then `docs/MAP.md`.
 
 ## Current status
 
-**Phase 2.1 - Interface: done, verified in CI.** The chat from Phase 2 kept its behaviour and
+**Phase 2.1 - Interface: done, verified in CI.** Workflow run
+[35311528088](https://github.com/iHOWi2/devour/actions/runs/35311528088), 2026-09-18: `lint,
+typecheck, tests` and `android debug apk` both passed on the first attempt, including the
+check that the packaged APK carries `assets/index.android.bundle`. The chat from Phase 2 kept its behaviour and
 lost its template: the interface is now monochrome - black, white and the greys between them,
 no hue anywhere - with one motion identity, a streaming caret instead of a status row, copy
 and regenerate on an answer, smart autoscroll, and a settings screen that is actually about
