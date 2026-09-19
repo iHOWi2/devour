@@ -10,8 +10,8 @@ import {useI18n} from '../i18n';
 import {Caret} from './Caret';
 import {CopyAction} from './CopyAction';
 import {GhostLines} from './GhostLines';
+import {IconAction} from './IconAction';
 import {Markdown} from './Markdown';
-import {ActionButton} from './ActionButton';
 
 type Props = {
   message: Message;
@@ -83,12 +83,11 @@ export function ChatTurn({message, onCopy, onRegenerate}: Props) {
             />
           )}
           {onRegenerate === undefined ? null : (
-            <ActionButton
+            <IconAction
               icon="again"
               label={t('chat.regenerate')}
               onPress={onRegenerate}
               testID="chat-regenerate"
-              tone="ghost"
             />
           )}
         </View>
@@ -128,11 +127,14 @@ function createStyles(theme: Theme) {
       marginRight: space.sm,
       marginTop: space.xs,
     },
+    // The icons sit in circles wider than their ink, so the row is pulled left by the
+    // difference: what has to line up with the text above it is the first icon, not its
+    // touch area.
     actions: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginTop: space.xs,
-      marginLeft: -space.md,
+      marginTop: space.sm,
+      marginLeft: -space.sm,
     },
   });
 }

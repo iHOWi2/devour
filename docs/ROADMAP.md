@@ -286,6 +286,11 @@ Delivered:
 - **A large system font can no longer break a screen.** `MAX_FONT_SCALE` (1.2) caps the
   device scale for `mono` and `display` only; prose still follows the device without a
   ceiling, because it reflows and code does not.
+- **No captions on the obvious.** The copy and again actions under an answer are icons
+  alone, in 36 px circles with `hitSlop` holding the 44 px touch floor; the word is spoken
+  rather than drawn. The same applies to the copy action in a code block's header. It is not
+  a general rule - it is for the two actions every chat has had for years, and
+  `ActionButton` offers no icon beside a label at all, so the choice stays one or the other.
 - **Affordances that answer a touch**: a `ghost` button tone that fills when pressed instead
   of doing nothing, a composer outline that brightens while it holds the keyboard, a send
   circle that is filled when it has something to send and outlined when it does not, and a
@@ -304,6 +309,8 @@ Defects the hardware screenshot found, all fixed here:
 | one listing filled three screens of scrolling between two sentences                                                                                 | a finished listing over 14 lines is folded, with the hidden line count on the button                                                                       |
 | the device's large system font inflated code and the empty-state statement until both overflowed                                                    | `MAX_FONT_SCALE` caps `mono` and `display`, and prose keeps following the device                                                                           |
 | the retry action on a failure line took the page's text colour on an inverted fill, which in the dark theme is white on white - it was invisible    | a fourth button tone, `contrast`, mirrors `primary` for a control sitting on an inverted fill, and a test asserts no label is drawn in the colour under it |
+| a copy icon captioned `Copy` and a circular arrow captioned `Again`: twice the ink for one meaning, on the surface with the least room for it       | both are icon-only now, with the label spoken; `src/ui/IconAction.tsx` holds the shape and the touch floor                                                 |
+| the list marker column was wide enough for `10.`, so a bullet floated half a word from its own line on a device with a large system font            | 16 px for a bullet, 24 only for a number                                                                                                                   |
 
 **Result, 2026-09-18.** Pull request #7, workflow run
 [35314932414](https://github.com/iHOWi2/devour/actions/runs/35314932414): lint,

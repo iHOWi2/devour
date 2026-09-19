@@ -98,15 +98,16 @@ devour/
 |   |   |-- SettingsScreen.tsx      model, interface, data and device sections
 |   |   `-- ProviderForm.tsx        the endpoint form itself: validation and its messages
 |   `-- ui/
-|       |-- ActionButton.tsx        primary, quiet, ghost and contrast button, press feedback
+|       |-- ActionButton.tsx        primary, quiet, ghost and contrast button; label only
 |       |-- Caret.tsx               the pulsing block cursor that says an answer is arriving
 |       |-- ChatTurn.tsx            one turn: raised block or full-width answer, its actions
 |       |-- Composer.tsx            rounded field with one round control: send, or stop
-|       |-- CopyAction.tsx          copies, then says so - only once the clipboard took it
+|       |-- CopyAction.tsx          copies, then becomes a tick - once the clipboard took it
 |       |-- DataRow.tsx             label + monospaced value, no state dot
 |       |-- EmptyState.tsx          the one large statement, staggered in
 |       |-- GhostLines.tsx          placeholder bars where the answer will be, with a wave
 |       |-- Icon.tsx                the seven drawn icons; no font, no character, no glyph
+|       |-- IconAction.tsx          an action that is only its icon, with a spoken label
 |       |-- Markdown.tsx            renders the parsed blocks; folds a long listing
 |       |-- RoundAction.tsx         the 44 px circle in the composer: send or stop
 |       |-- ScreenHeader.tsx        title, what the screen points at, its text actions

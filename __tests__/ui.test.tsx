@@ -4,6 +4,7 @@ import type {ReactTestInstance, ReactTestRenderer} from 'react-test-renderer';
 import {act, create} from 'react-test-renderer';
 
 import {themes} from '../src/design/theme';
+import {TOUCH_TARGET} from '../src/design/tokens';
 import {ThemeProvider} from '../src/design/ThemeProvider';
 import {LanguageProvider} from '../src/i18n';
 import type {Language} from '../src/i18n';
@@ -12,6 +13,7 @@ import type {ButtonTone} from '../src/ui/ActionButton';
 import {CopyAction} from '../src/ui/CopyAction';
 import {GhostLines} from '../src/ui/GhostLines';
 import {ICON_NAMES, Icon} from '../src/ui/Icon';
+import {IconAction} from '../src/ui/IconAction';
 import {Markdown} from '../src/ui/Markdown';
 import {SettingRow} from '../src/ui/SettingRow';
 import {StateLine} from '../src/ui/StateLine';
@@ -204,19 +206,46 @@ describe('buttons', () => {
     expect(labelColour(renderer)).not.toBe(palette.inverse);
   });
 
-  it('draws an icon beside the label only when asked', () => {
-    expect(
-      hosts(
-        render(<ActionButton icon="again" label="Again" onPress={() => {}} />),
-        'RNSVGPath',
-      ).length,
-    ).toBeGreaterThan(0);
+  it('never draws an icon next to a word that already says it', () => {
     expect(
       hosts(
         render(<ActionButton label="Again" onPress={() => {}} />),
         'RNSVGPath',
       ),
     ).toHaveLength(0);
+  });
+});
+
+describe('icon-only actions', () => {
+  /**
+   * The author's verdict on the first pass: a copy icon captioned `Copy` is twice the ink
+   * for one meaning, and everyone already knows what the two chat actions do. The word did
+   * not disappear, it stopped being drawn.
+   */
+  it('says its name out loud instead of writing it next to the icon', () => {
+    const renderer = render(
+      <IconAction icon="again" label="Again" onPress={() => {}} testID="act" />,
+    );
+
+    expect(host(renderer, 'act').props.accessibilityLabel).toBe('Again');
+    expect(hosts(renderer, 'RNSVGPath').length).toBeGreaterThan(0);
+    expect(hosts(renderer, 'Text')).toHaveLength(0);
+  });
+
+  /**
+   * A 44 px circle under a paragraph is a button that shouts, so the ink is 36. The rule is
+   * about the finger, not the ink: `hitSlop` has to make up the difference.
+   */
+  it('keeps the touch area at the floor even though the circle is smaller', () => {
+    const renderer = render(
+      <IconAction icon="copy" label="Copy" onPress={() => {}} testID="act" />,
+    );
+    const button = host(renderer, 'act');
+    const drawn = style(button).width as number;
+    const slop = button.props.hitSlop as number;
+
+    expect(drawn).toBeLessThan(TOUCH_TARGET);
+    expect(drawn + slop * 2).toBeGreaterThanOrEqual(TOUCH_TARGET);
   });
 });
 
@@ -242,13 +271,14 @@ describe('copy action', () => {
       />,
     );
 
-    expect(json(renderer)).toContain('Copy');
+    expect(host(renderer, 'copy').props.accessibilityLabel).toBe('Copy');
+    expect(hosts(renderer, 'Text')).toHaveLength(0);
 
     await act(async () => {
       pressable(renderer, 'copy').props.onPress();
     });
 
-    expect(json(renderer)).toContain('Copied');
+    expect(host(renderer, 'copy').props.accessibilityLabel).toBe('Copied');
   });
 
   it('says nothing when the clipboard refused', async () => {
@@ -265,7 +295,7 @@ describe('copy action', () => {
       pressable(renderer, 'copy').props.onPress();
     });
 
-    expect(json(renderer)).not.toContain('Copied');
+    expect(host(renderer, 'copy').props.accessibilityLabel).toBe('Copy');
   });
 });
 
